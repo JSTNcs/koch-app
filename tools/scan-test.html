@@ -1,0 +1,139 @@
+<!doctype html>
+<!-- Prüft den Scan: (1) Bibliothek liest Barcodes mit lokalen Dateien, (2) kein CDN, (3) Ablauf in der App.
+     Aufruf: node tools/browser-test.mjs tools/scan-test.html -->
+<meta charset="utf-8">
+<body style="margin:0;background:#888">
+<pre id="out" style="position:fixed;right:0;top:0;width:300px;background:#fff;font-size:11px;margin:0;padding:4px;z-index:9"></pre>
+<iframe id="app" style="width:390px;height:780px;border:0;background:#fff;display:block;margin:10px"></iframe>
+<script type="module">
+import { erzeugeDetektor } from '../js/scanner.js';
+
+const out = document.getElementById('out');
+const log = (s) => (out.textContent += s + '\n');
+const ok = (b, t) => log((b ? 'PASS ' : 'FAIL ') + t);
+const warte = (ms) => new Promise((r) => setTimeout(r, ms));
+const frame = document.getElementById('app');
+const doc = () => frame.contentDocument;
+const text = () => doc().body.innerText;
+const knopf = (s) => [...doc().querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(s));
+const klick = async (s, ms = 300) => { const k = knopf(s); if (!k) throw new Error('Knopf fehlt: ' + s + ' | Sichtbar: ' + text().slice(0, 200)); k.click(); await warte(ms); };
+const tippe = (el, w) => { el.value = w; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); };
+async function bis(bedingung, ms = 10000) { const t = Date.now(); while (Date.now() - t < ms) { if (bedingung()) return true; await warte(150); } return false; }
+
+// ---- EAN-13 zeichnen (nur für den Test) ----
+const L = ['0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'];
+const G = ['0100111','0110011','0011011','0100001','0011101','0111001','0000101','0010001','0001001','0010111'];
+const R = ['1110010','1100110','1101100','1000010','1011100','1001110','1010000','1000100','1001000','1110100'];
+const P = ['LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG','LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL'];
+function ean13Canvas(code) {
+  const d = [...code].map(Number);
+  let bits = '101';
+  for (let i = 0; i < 6; i++) bits += (P[d[0]][i] === 'L' ? L : G)[d[i + 1]];
+  bits += '01010';
+  for (let i = 7; i < 13; i++) bits += R[d[i]];
+  bits += '101';
+  const m = 3, rand = 40, c = document.createElement('canvas');
+  c.width = bits.length * m + rand * 2; c.height = 160;
+  const g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = '#000';
+  [...bits].forEach((b, i) => b === '1' && g.fillRect(rand + i * m, 20, m, 120));
+  return c;
+}
+
+async function ladeApp() {
+  const geladen = new Promise((r) => (frame.onload = r));
+  if (frame.contentWindow.location.href.includes('index.html')) frame.contentWindow.location.reload();
+  else frame.src = '../index.html#/vorrat';
+  await geladen;
+  await bis(() => doc().querySelector('#screen')?.children.length, 10000);
+  frame.contentWindow.confirm = () => true;
+}
+
+async function lauf() {
+  // ===== 1. Bibliothek liest Barcodes (lokal) =====
+  const detektor = erzeugeDetektor();
+  for (const code of ['4006381333931', '3017620422003']) {
+    const r = await detektor.detect(ean13Canvas(code));
+    ok(r.length === 1 && r[0].rawValue === code, `liest Barcode ${code} (gelesen: ${r.map((x) => x.rawValue).join(',') || 'nichts'})`);
+  }
+  const leer = document.createElement('canvas'); leer.width = 200; leer.height = 100;
+  ok((await detektor.detect(leer)).length === 0, 'leeres Bild ergibt keinen Treffer');
+
+  // ===== 2. Nichts aus dem Internet für die Bibliothek =====
+  const geladen = performance.getEntriesByType('resource').map((e) => e.name);
+  ok(geladen.some((u) => u.includes('/lib/zxing-wasm/zxing_reader.wasm')), '.wasm kommt aus dem eigenen Projekt');
+  const fremd = geladen.filter((u) => !u.startsWith(location.origin));
+  ok(fremd.length === 0, 'keine fremden Adressen geladen' + (fremd.length ? ': ' + fremd.join(', ') : ''));
+
+  // ===== 3. Ablauf in der App =====
+  await new Promise((r) => { const q = indexedDB.deleteDatabase('koch-app'); q.onsuccess = q.onerror = q.onblocked = r; });
+  await ladeApp();
+
+  // 3a. Kamera-Ansicht (Test-Kamera liefert ein Muster) und Barcode eintippen
+  await klick('📷 Scannen', 600);
+  ok(text().includes('Barcode scannen'), 'Scan-Ansicht öffnet');
+  ok(await bis(() => text().includes('Halte den Barcode')), 'Kamera startet (Testkamera)');
+  const eingabe = doc().querySelector('input[inputmode="numeric"]');
+  eingabe.closest('details').open = true; // wie ein Mensch: erst "Barcode eintippen" aufklappen
+  tippe(eingabe, '4006381333932'); // falsche Prüfziffer
+  await klick('Suchen');
+  ok(text().includes('kein gültiger Barcode'), 'falsche Prüfziffer wird abgelehnt');
+
+  // 3b. Echte Abfrage bei Open Food Facts (braucht Internet)
+  tippe(eingabe, '3017620422003');
+  await klick('Suchen', 200);
+  ok(await bis(() => text().includes('Produkt prüfen'), 20000), 'Formular nach Suche geöffnet');
+  const gefunden = text().includes('Gefunden bei Open Food Facts');
+  ok(gefunden, 'Open Food Facts kennt 3017620422003 (CORS und Netz ok)');
+  const felder = () => [...doc().querySelectorAll('input[type=text]')];
+  ok(felder()[0].value.length > 0, 'Name vorausgefüllt: "' + felder()[0].value + '"');
+  ok(felder()[1].value === '450' || felder()[1].value.length > 0, 'Packungsgröße vorausgefüllt: "' + felder()[1].value + '" ' + doc().querySelectorAll('select')[1].value);
+  const kcalFeld = felder()[3];
+  log('INFO Nährwerte: kcal=' + kcalFeld.value);
+  await klick('Zum Vorrat', 500);
+  ok(text().includes('✔ Hinzugefügt'), 'Produkt zum Vorrat hinzugefügt');
+  const erste = text();
+
+  // 3c. Dasselbe Produkt noch einmal: bekannt, Menge addiert sich
+  await klick('📷 Nächstes Produkt', 600);
+  tippe(doc().querySelector('input[inputmode="numeric"]'), '3017620422003');
+  await klick('Suchen', 200);
+  ok(await bis(() => text().includes('Produkt prüfen')), 'zweites Mal: Formular');
+  ok(text().includes('kennt die App schon'), 'Produkt ist jetzt gespeichert (kein Netz nötig)');
+  await klick('Zum Vorrat', 500);
+  ok(/Im Vorrat sind jetzt/.test(text()), 'Menge wird addiert: ' + text().split('\n').find((z) => z.includes('Im Vorrat')));
+  await klick('Fertig', 400);
+  ok(doc().querySelectorAll('.eintrag').length === 1, 'im Vorrat steht nur ein Eintrag (zusammengeführt)');
+
+  // 3d. Kein Internet: von Hand eintragen, App merkt es sich
+  frame.contentWindow.fetch = () => Promise.reject(new TypeError('Failed to fetch'));
+  await klick('📷 Scannen', 600);
+  tippe(doc().querySelector('input[inputmode="numeric"]'), '4006381333931');
+  await klick('Suchen', 200);
+  ok(await bis(() => text().includes('Produkt prüfen')), 'offline: Formular');
+  ok(text().includes('Keine Verbindung'), 'offline: verständliche Meldung');
+  await klick('Zum Vorrat', 300);
+  ok(text().includes('Bitte einen Namen'), 'ohne Name wird nicht gespeichert');
+  let f = felder();
+  tippe(f[0], 'Testnudeln'); tippe(f[1], '500');
+  await klick('Zum Vorrat', 500);
+  ok(text().includes('✔ Hinzugefügt'), 'von Hand eingetragen');
+  await klick('📷 Nächstes Produkt', 600);
+  tippe(doc().querySelector('input[inputmode="numeric"]'), '4006381333931');
+  await klick('Suchen', 200);
+  ok(await bis(() => text().includes('Produkt prüfen')), 'noch einmal gleicher Barcode');
+  ok(text().includes('kennt die App schon') && felder()[0].value === 'Testnudeln' && felder()[1].value === '500', 'App hat sich das Produkt gemerkt (offline)');
+  await klick('Abbrechen', 400);
+  ok(doc().querySelectorAll('.eintrag').length === 2, 'Abbrechen legt nichts an (2 Einträge)');
+
+  // 3e. Layout
+  ok(doc().documentElement.scrollWidth <= 390, 'kein seitliches Scrollen (' + doc().documentElement.scrollWidth + ')');
+  await klick('📷 Scannen', 600);
+  ok(!/null|undefined|object/.test(text()), 'Scan-Ansicht: kein "null"/"undefined" sichtbar');
+  await klick('Abbrechen', 300);
+  await klick('📷 Scannen', 600); // Scan-Ansicht offen lassen, damit das Bild sie zeigt
+  log('FERTIG');
+}
+lauf().catch((e) => { log('FAIL Fehler: ' + e.message); log('FERTIG'); });
+</script>

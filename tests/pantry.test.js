@@ -115,9 +115,18 @@ test('sortiere: nach Name, Umlaute und Groß/Klein richtig', () => {
 
 // --- Zusammenführen beim Einkauf ---
 test('hinzufuegenOderErhoehen: neues Produkt wird angehängt', () => {
-  const r = hinzufuegenOderErhoehen([mk({ name: 'Reis' })], mk({ name: 'Nudeln' }));
+  const nudeln = mk({ name: 'Nudeln' });
+  const r = hinzufuegenOderErhoehen([mk({ name: 'Reis' })], nudeln);
   assert.equal(r.liste.length, 2);
   assert.equal(r.zusammengefuehrt, false);
+  assert.equal(r.eintrag, nudeln);
+});
+test('hinzufuegenOderErhoehen: liefert den gespeicherten (zusammengeführten) Eintrag zurück', () => {
+  const alt = neuerEintrag({ name: 'Reis', art: 'menge', menge: 500, einheit: 'g' }, { id: 'alt' });
+  const r = hinzufuegenOderErhoehen([alt], neuerEintrag({ name: 'Reis', art: 'menge', menge: 250, einheit: 'g' }, { id: 'neu' }));
+  assert.equal(r.eintrag.id, 'alt');
+  assert.equal(r.eintrag.menge, 750);
+  assert.equal(r.liste[0], r.eintrag);
 });
 test('hinzufuegenOderErhoehen: gleicher Barcode und gleiche Einheit addiert die Menge', () => {
   const alt = neuerEintrag({ name: 'Nudeln', art: 'menge', menge: 500, einheit: 'g', barcode: '111' }, { id: 'alt' });

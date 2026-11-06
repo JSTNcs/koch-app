@@ -92,9 +92,10 @@ function fruehereres(a, b) {
 }
 
 // Beim Einkaufen: Gibt es den Artikel schon, wird die Menge addiert, sonst kommt er neu dazu.
+// Rückgabe: { liste (neue Liste), zusammengefuehrt (true/false), eintrag (der Eintrag, der gespeichert werden muss) }
 export function hinzufuegenOderErhoehen(liste, neu) {
   const i = liste.findIndex((alt) => istDerselbe(alt, neu));
-  if (i === -1) return { liste: [...liste, neu], zusammengefuehrt: false };
+  if (i === -1) return { liste: [...liste, neu], zusammengefuehrt: false, eintrag: neu };
 
   const alt = liste[i];
   const zusammen =
@@ -103,5 +104,5 @@ export function hinzufuegenOderErhoehen(liste, neu) {
       : { ...alt, da: true, ablauf: fruehereres(alt.ablauf, neu.ablauf) };
   const kopie = [...liste];
   kopie[i] = zusammen;
-  return { liste: kopie, zusammengefuehrt: true };
+  return { liste: kopie, zusammengefuehrt: true, eintrag: zusammen };
 }

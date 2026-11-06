@@ -37,7 +37,7 @@ async function lauf() {
   ok(text().includes('Vorrat ist leer'), 'leerer Vorrat zeigt Hinweis');
 
   // Nudeln anlegen
-  await klick('＋ Hinzufügen');
+  await klick('＋ Von Hand');
   const felder = doc().querySelectorAll('input');
   tippe(felder[0], 'Nudeln');
   tippe(felder[1], '500');
@@ -50,7 +50,7 @@ async function lauf() {
   ok(text().includes('450 g'), 'zweimal − 50 ergibt 450 g');
 
   // Falsche Eingabe
-  await klick('＋ Hinzufügen');
+  await klick('＋ Von Hand');
   tippe(doc().querySelectorAll('input')[0], 'Reis');
   tippe(doc().querySelectorAll('input')[1], 'abc');
   await klick('Speichern');
@@ -58,7 +58,7 @@ async function lauf() {
   await klick('Abbrechen');
 
   // Gewürz
-  await klick('＋ Hinzufügen');
+  await klick('＋ Von Hand');
   const art = doc().querySelector('select');
   tippe(doc().querySelectorAll('input')[0], 'Salz');
   art.value = 'da_leer'; art.dispatchEvent(new Event('change'));
@@ -88,7 +88,7 @@ async function lauf() {
 
   // Handy-Format: kein seitliches Scrollen
   ok(doc().documentElement.scrollWidth <= 390, 'kein seitliches Scrollen (Breite ' + doc().documentElement.scrollWidth + ')');
-  await klick('＋ Hinzufügen'); // Formular offen lassen, damit das Bild es zeigt
+  await klick('＋ Von Hand'); // Formular offen lassen, damit das Bild es zeigt
   log('FERTIG');
 }
 lauf().catch((e) => { log('FAIL Fehler: ' + e.message); log('FERTIG'); });

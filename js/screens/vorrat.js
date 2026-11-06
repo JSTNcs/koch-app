@@ -28,12 +28,13 @@ export async function render(container) {
     const kopf = h(
       'div',
       { class: 'zeile' },
-      h('button', { class: 'voll', onclick: () => zeigeFormular(null) }, '＋ Hinzufügen')
+      h('button', { onclick: scannen }, '📷 Scannen'),
+      h('button', { class: 'zweit', onclick: () => zeigeFormular(null) }, '＋ Von Hand')
     );
 
     const inhalt = liste.length
       ? h('ul', { class: 'liste' }, liste.map(eintragKarte))
-      : h('p', { class: 'leer-text' }, 'Dein Vorrat ist leer. Tippe auf „Hinzufügen“.');
+      : h('p', { class: 'leer-text' }, 'Dein Vorrat ist leer. Tippe auf „Scannen“ oder „Von Hand“.');
 
     const teile = [kopf, fehler ? h('p', { class: 'hinweis fehler' }, fehler) : null, inhalt].filter(Boolean);
     container.replaceChildren(...teile);
@@ -66,6 +67,17 @@ export async function render(container) {
         h('button', { class: 'gefahr', onclick: () => loeschen(e) }, 'Löschen')
       )
     );
+  }
+
+  async function scannen() {
+    // Erst jetzt laden, damit der Vorrat schnell aufgeht und die Kamera-Bibliothek nur bei Bedarf läuft.
+    const { starteScan } = await import('./scan.js');
+    starteScan(container, {
+      fertig: async () => {
+        await laden();
+        zeigeListe();
+      },
+    });
   }
 
   async function loeschen(e) {

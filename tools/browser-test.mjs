@@ -34,7 +34,7 @@ const port = 9333;
 const profil = mkdtempSync(join(tmpdir(), 'koch-test-'));
 const browser = spawn(
   exe,
-  ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profil}`, '--disable-gpu', '--disable-extensions', '--no-first-run', '--window-size=700,830', 'about:blank'],
+  ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profil}`, '--disable-gpu', '--disable-extensions', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--no-first-run', '--window-size=700,830', 'about:blank'],
   { stdio: 'ignore' }
 );
 

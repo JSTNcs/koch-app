@@ -14,3 +14,8 @@ export function h(tag, attribute = {}, ...kinder) {
   }
   return el;
 }
+
+// Ersetzt den Inhalt von "el". Leere Teile (null, false) werden ausgelassen statt als Text "null" gezeigt.
+export function ersetze(el, ...kinder) {
+  el.replaceChildren(...kinder.flat().filter((k) => k !== null && k !== undefined && k !== false));
+}
