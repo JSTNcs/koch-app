@@ -1,0 +1,9 @@
+{
+  "name": "koch-app",
+  "private": true,
+  "type": "module",
+  "description": "Koch- & Einkaufs-App (PWA). Kein Build-Schritt; package.json dient nur den Tests.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

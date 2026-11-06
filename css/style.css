@@ -1,0 +1,128 @@
+/* Schlichtes Handy-Layout. Design-Feinschliff kommt erst in Phase 6. */
+:root {
+  --gruen: #2e7d32;
+  --gruen-hell: #e8f5e9;
+  --text: #1b1b1b;
+  --grau: #666;
+  --linie: #d9d9d9;
+  --rot: #b3261e;
+  --tabhoehe: 64px;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 18px;
+  color: var(--text);
+  background: #fff;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--gruen);
+  color: #fff;
+  padding: calc(env(safe-area-inset-top) + 10px) 16px 10px;
+}
+.topbar h1 { margin: 0; font-size: 22px; }
+
+main {
+  padding: 16px;
+  padding-bottom: calc(var(--tabhoehe) + env(safe-area-inset-bottom) + 24px);
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* Untere Navigation */
+.tabbar {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 20;
+  display: flex;
+  background: #fff;
+  border-top: 1px solid var(--linie);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.tabbar a {
+  flex: 1 1 0;
+  min-width: 0;
+  height: var(--tabhoehe);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-decoration: none;
+  color: var(--grau);
+  font-size: 11px;
+  line-height: 1.1;
+  text-align: center;
+}
+.tabbar a .icon { font-size: 22px; line-height: 1; }
+.tabbar a[aria-current="page"] { color: var(--gruen); font-weight: 600; background: var(--gruen-hell); }
+
+/* Grundelemente: große Knöpfe, einhändig bedienbar */
+button, .knopf {
+  font: inherit;
+  min-height: 52px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--gruen);
+  color: #fff;
+  font-weight: 600;
+}
+button.zweit { background: var(--gruen-hell); color: var(--gruen); }
+button.gefahr { background: #fdecea; color: var(--rot); }
+button:disabled { opacity: 0.5; }
+button.voll { width: 100%; }
+
+input, select {
+  font: inherit;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 1px solid var(--linie);
+  border-radius: 10px;
+  width: 100%;
+  background: #fff;
+}
+
+label { display: block; margin: 12px 0 4px; font-weight: 600; }
+
+.hinweis {
+  background: var(--gruen-hell);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 12px 0;
+}
+.hinweis.warnung { background: #fff4e5; }
+.hinweis.fehler { background: #fdecea; }
+
+.leer-text { color: var(--grau); text-align: center; margin-top: 40px; }
+
+/* Vorrat */
+.liste { list-style: none; margin: 12px 0; padding: 0; }
+.eintrag {
+  border: 1px solid var(--linie);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.eintrag .kopf { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.eintrag .name { font-weight: 600; }
+.eintrag .menge { color: var(--grau); white-space: nowrap; }
+.eintrag .knoepfe { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.eintrag .knoepfe button { flex: 1 1 0; min-width: 64px; }
+
+.zeile { display: flex; gap: 8px; }
+.zeile > * { flex: 1 1 0; min-width: 0; }
+
+/* Scanner */
+.scanner { position: relative; background: #000; border-radius: 12px; overflow: hidden; margin: 12px 0; }
+.scanner video { width: 100%; display: block; max-height: 60vh; object-fit: cover; }
