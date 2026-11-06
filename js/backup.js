@@ -1,13 +1,14 @@
 // Sicherung: Daten in eine Datei packen und aus einer Datei prüfen. Reine Logik (ohne Datenbank, ohne Bildschirm).
 import { neuerEintrag } from './pantry.js';
 import { neuesProdukt } from './produkt.js';
+import { normalisiereListeneintrag } from './einkauf.js';
 
 const APP = 'koch-app';
 const VERSION = 1;
 const NICHT_SICHERN = ['letzteSicherung']; // gehört zu diesem Handy, nicht zu den Daten
 const TAG_MS = 86400000;
 
-export function erzeugeSicherung({ vorrat, produkte, einstellungen }, jetzt = new Date()) {
+export function erzeugeSicherung({ vorrat, produkte, einstellungen, einkauf }, jetzt = new Date()) {
   return {
     app: APP,
     version: VERSION,
@@ -15,6 +16,7 @@ export function erzeugeSicherung({ vorrat, produkte, einstellungen }, jetzt = ne
     daten: {
       vorrat,
       produkte,
+      einkauf: einkauf || [],
       einstellungen: (einstellungen || []).filter((e) => !NICHT_SICHERN.includes(e.key)),
     },
   };
@@ -78,10 +80,25 @@ export function pruefeSicherung(text) {
     return p;
   });
 
+  // Die Einkaufsliste gibt es erst seit Phase 2: In älteren Sicherungen fehlt sie, das ist in Ordnung.
+  if (d.einkauf !== undefined && !Array.isArray(d.einkauf)) throw new Error('Die Einkaufsliste in der Datei ist beschädigt.');
+  const listenIds = new Set();
+  const einkauf = (d.einkauf || []).map((roh, i) => {
+    let e;
+    try {
+      e = normalisiereListeneintrag(roh);
+    } catch (fehler) {
+      throw new Error(`Einkaufsliste, Eintrag ${i + 1}: ${fehler.message}`);
+    }
+    if (listenIds.has(e.id)) throw new Error('In der Einkaufsliste kommt eine Kennung doppelt vor.');
+    listenIds.add(e.id);
+    return e;
+  });
+
   const einstellungen = (Array.isArray(d.einstellungen) ? d.einstellungen : []).filter(
     (e) => e && typeof e.key === 'string' && !NICHT_SICHERN.includes(e.key) && 'value' in e
   );
-  return { vorrat, produkte, einstellungen, erstelltAm: typeof s.erstelltAm === 'string' ? s.erstelltAm : null };
+  return { vorrat, produkte, einkauf, einstellungen, erstelltAm: typeof s.erstelltAm === 'string' ? s.erstelltAm : null };
 }
 
 // Volle Tage seit einem Zeitpunkt. Kaputtes oder fehlendes Datum: null.

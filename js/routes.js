@@ -16,7 +16,7 @@ export const ROUTES = [
     label: 'Einkauf',
     title: 'Einkaufsliste',
     icon: '🛒',
-    load: leer('Die Einkaufsliste kommt in Phase 2.'),
+    load: () => import('./screens/einkauf.js'),
   },
   {
     id: 'rezepte',

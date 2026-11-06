@@ -11,6 +11,7 @@ export async function erstelleSicherung(jetzt = new Date()) {
     name: sicherungsDateiname(jetzt),
     anzahlVorrat: daten.vorrat.length,
     anzahlProdukte: daten.produkte.length,
+    anzahlEinkauf: daten.einkauf.length,
   };
 }
 
@@ -37,7 +38,7 @@ export async function ladeHinweis(jetzt = new Date()) {
   try {
     const daten = await alleDaten();
     const letzte = daten.einstellungen.find((e) => e.key === 'letzteSicherung')?.value ?? null;
-    return sicherungsHinweis({ letzte, hatDaten: daten.vorrat.length + daten.produkte.length > 0, jetzt });
+    return sicherungsHinweis({ letzte, hatDaten: daten.vorrat.length + daten.produkte.length + daten.einkauf.length > 0, jetzt });
   } catch {
     return null;
   }

@@ -27,7 +27,10 @@ Der Nutzer hat keine Programmiererfahrung: Antworten auf Deutsch, einfach erklä
 - **Sicherung:** Export und Import als Datei per Knopfdruck. Hinweis in der App, wenn die letzte Sicherung älter als 7 Tage ist.
 
 ## Datenmodell (Grundgerüst)
-- **Produkt:** Barcode, Name, Packungsgröße, Einheit, Nährwerte pro 100 g/ml
+- **Produkt:** Barcode, Name, Packungsgröße, Einheit, Nährwerte pro 100 g/ml, Gruppe (Produkte mit gleicher Gruppe gelten als
+  gleichwertig, z. B. andere Marke, gleiches Produkt)
+- **Einkaufsliste:** Eintrag ist ein Produkt (Marke, Barcode, Anzahl Packungen) oder Freitext ohne Marke (Menge, Einheit); abgehakt ja/nein.
+  Gescannte Produkte werden von der Liste genommen, in den Vorrat kommt immer das gescannte Produkt.
 - **Vorrat:** Produkt oder lose Zutat, Menge, Einheit, Ablaufdatum (optional), Art = `menge` oder `da_leer`
 - **Rezept:** Name, Portionen, Zutaten (Zutat, Menge, Einheit, optional ja/nein), Schritte, Quelle
 - **Mahlzeit:** Datum, Rezept oder Produkt, gegessene Menge/Portion, Nährwerte

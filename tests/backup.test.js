@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { erzeugeSicherung, pruefeSicherung, sicherungsDateiname, tageSeit, sicherungsHinweis } from '../js/backup.js';
 import { neuerEintrag, setzeDa } from '../js/pantry.js';
 import { neuesProdukt } from '../js/produkt.js';
+import { neuerProduktEintrag, neuerFreiEintrag, schalteHaken } from '../js/einkauf.js';
 
 const JETZT = new Date('2026-11-06T12:00:00.000Z');
 const tageZurueck = (n, extraMs = 0) => new Date(JETZT.getTime() - n * 86400000 - extraMs).toISOString();
@@ -134,4 +135,33 @@ test('sicherungsHinweis: älter als 7 Tage', () => {
 });
 test('sicherungsHinweis: kaputtes Datum zählt als "noch nie"', () => {
   assert.match(sicherungsHinweis({ letzte: 'murks', hatDaten: true, jetzt: JETZT }), /noch keine Sicherung/);
+});
+
+// --- Einkaufsliste in der Sicherung ---
+const liste1 = neuerProduktEintrag(produkt, 2, { id: 'l1' });
+const liste2 = schalteHaken(neuerFreiEintrag({ name: 'Zwiebeln', anzahl: 3 }, { id: 'l2' }));
+
+test('Einkaufsliste: kommt in die Sicherung und wieder heraus', () => {
+  const s = erzeugeSicherung({ ...daten(), einkauf: [liste1, liste2] }, JETZT);
+  assert.equal(s.daten.einkauf.length, 2);
+  const r = pruefeSicherung(JSON.stringify(s));
+  assert.deepEqual(r.einkauf, [liste1, liste2]);
+});
+test('Einkaufsliste: alte Sicherungen ohne Liste bleiben lesbar', () => {
+  const alt = gueltig();
+  delete alt.daten.einkauf;
+  assert.deepEqual(pruefeSicherung(JSON.stringify(alt)).einkauf, []);
+  assert.deepEqual(erzeugeSicherung(daten(), JETZT).daten.einkauf, []);
+});
+test('Einkaufsliste: ungültiger Eintrag wird mit Nummer gemeldet, doppelte Kennung abgelehnt', () => {
+  const s = JSON.parse(JSON.stringify(erzeugeSicherung({ ...daten(), einkauf: [liste1, liste2] }, JETZT)));
+  const kaputt = JSON.parse(JSON.stringify(s));
+  kaputt.daten.einkauf[1].anzahl = -1;
+  assert.throws(() => pruefeSicherung(JSON.stringify(kaputt)), /Einkaufsliste, Eintrag 2/);
+  const doppelt = JSON.parse(JSON.stringify(s));
+  doppelt.daten.einkauf[1].id = 'l1';
+  assert.throws(() => pruefeSicherung(JSON.stringify(doppelt)), /doppelt/);
+  const keinArray = JSON.parse(JSON.stringify(s));
+  keinArray.daten.einkauf = 'x';
+  assert.throws(() => pruefeSicherung(JSON.stringify(keinArray)), /Einkaufsliste/);
 });

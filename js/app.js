@@ -25,6 +25,7 @@ async function zeigeBildschirm() {
     if (a.dataset.id === route.id) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   }
+  screenEl.className = ''; // Zusatz-Klassen des vorigen Bildschirms entfernen
   screenEl.replaceChildren();
   try {
     const bildschirm = await route.load();

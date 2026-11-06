@@ -78,6 +78,7 @@ for (let i = 0; i < 120; i++) {
   if (text.includes('FERTIG')) break;
 }
 if (bild) {
+  await auswerten("document.getElementById('out').style.display = 'none'"); // Bericht ausblenden, damit die App frei zu sehen ist
   const s = await cdp('Page.captureScreenshot', { format: 'png' });
   writeFileSync(bild, Buffer.from(s.result.data, 'base64'));
 }

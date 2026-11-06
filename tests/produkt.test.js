@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseMengenText, produktAusOff, neuesProdukt, eintragAusProdukt } from '../js/produkt.js';
+import { parseMengenText, produktAusOff, neuesProdukt, eintragAusProdukt, gleichsetzen, gruppeVon } from '../js/produkt.js';
 
 // --- Packungsgröße aus Text ---
 test('parseMengenText: übliche Schreibweisen', () => {
@@ -52,6 +52,7 @@ test('produktAusOff: vollständiges Produkt', () => {
     einheit: 'g',
     naehrwerte: { kcal: 539, eiweiss: 6.3, kohlenhydrate: 57.5, fett: 30.9 },
     quelle: 'off',
+    gruppe: null,
   });
 });
 test('produktAusOff: nicht gefunden ergibt null', () => {
@@ -105,6 +106,7 @@ test('neuesProdukt: von Hand mit Nährwerten', () => {
     einheit: 'g',
     naehrwerte: { kcal: 370, eiweiss: 13, kohlenhydrate: 59, fett: 7 },
     quelle: 'manuell',
+    gruppe: null,
   });
 });
 test('neuesProdukt: Nährwerte sind freiwillig; leere Felder ergeben null', () => {
@@ -148,4 +150,50 @@ test('eintragAusProdukt: Anzahl muss größer als 0 sein', () => {
   const produkt = neuesProdukt({ barcode: '4006381333931', name: 'Nudeln', art: 'menge', packung: 500, einheit: 'g' });
   assert.throws(() => eintragAusProdukt(produkt, { anzahl: 0 }), /Anzahl/);
   assert.throws(() => eintragAusProdukt(produkt, { anzahl: NaN }), /Anzahl/);
+});
+
+// --- Gleichwertige Produkte (andere Marke, gleiches Produkt) ---
+test('neuesProdukt: behält die Gruppe der Gleichwertigkeit', () => {
+  const p = neuesProdukt({ barcode: '4006381333931', name: 'X', art: 'menge', packung: 1, einheit: 'stk', gruppe: 'g1' });
+  assert.equal(p.gruppe, 'g1');
+});
+
+const mkp = (barcode, name, gruppe = null) => neuesProdukt({ barcode, name, art: 'menge', packung: 500, einheit: 'g', gruppe });
+
+test('gleichsetzen: zwei Produkte ohne Gruppe bekommen eine gemeinsame neue', () => {
+  const a = mkp('4006381333931', 'Barilla');
+  const b = mkp('96385074', 'Gut & Günstig');
+  const geaendert = gleichsetzen([a, b], a, b, { gruppe: 'g1' });
+  assert.equal(geaendert.length, 2);
+  assert.ok(geaendert.every((p) => p.gruppe === 'g1'));
+  assert.deepEqual(geaendert.map((p) => p.barcode).sort(), ['4006381333931', '96385074']);
+  assert.equal(a.gruppe, null); // Original unverändert
+});
+test('gleichsetzen: hat nur eines schon eine Gruppe, übernimmt das andere sie', () => {
+  const a = mkp('4006381333931', 'Barilla', 'g7');
+  const b = mkp('96385074', 'Gut & Günstig');
+  const geaendert = gleichsetzen([a, b], a, b);
+  assert.deepEqual(geaendert.map((p) => [p.barcode, p.gruppe]), [['96385074', 'g7']]);
+  const umgekehrt = gleichsetzen([a, b], b, a);
+  assert.deepEqual(umgekehrt.map((p) => [p.barcode, p.gruppe]), [['96385074', 'g7']]);
+});
+test('gleichsetzen: zwei verschiedene Gruppen werden zusammengelegt (auch dritte Mitglieder)', () => {
+  const a = mkp('4006381333931', 'Barilla', 'g1');
+  const b = mkp('96385074', 'Gut & Günstig', 'g2');
+  const c = mkp('0036000291452', 'Dritte', 'g2');
+  const d = mkp('3017620422003', 'Fremd', 'g3');
+  const geaendert = gleichsetzen([a, b, c, d], a, b);
+  assert.deepEqual(geaendert.map((p) => [p.barcode, p.gruppe]).sort(), [['0036000291452', 'g1'], ['96385074', 'g1']]);
+});
+test('gleichsetzen: nichts zu tun bei gleicher Gruppe oder gleichem Produkt', () => {
+  const a = mkp('4006381333931', 'Barilla', 'g1');
+  const b = mkp('96385074', 'Gut & Günstig', 'g1');
+  assert.deepEqual(gleichsetzen([a, b], a, b), []);
+  assert.deepEqual(gleichsetzen([a], a, a), []);
+});
+test('gruppeVon: schlägt die Gruppe nach', () => {
+  const a = mkp('4006381333931', 'Barilla', 'g1');
+  assert.equal(gruppeVon('4006381333931', [a]), 'g1');
+  assert.equal(gruppeVon('4006381333931', [mkp('4006381333931', 'X')]), null);
+  assert.equal(gruppeVon('999', [a]), null);
 });

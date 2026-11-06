@@ -83,6 +83,7 @@ export function produktAusOff(antwort, barcode) {
     einheit: packung ? packung.einheit : null,
     naehrwerte: naehrwerteAusOff(p.nutriments),
     quelle: 'off',
+    gruppe: null,
   };
 }
 
@@ -131,6 +132,7 @@ export function neuesProdukt(eingabe) {
     einheit,
     naehrwerte,
     quelle: eingabe.quelle === 'off' ? 'off' : 'manuell',
+    gruppe: eingabe.gruppe ? String(eingabe.gruppe) : null,
   };
 }
 
@@ -153,4 +155,29 @@ export function eintragAusProdukt(produkt, { anzahl = 1, ablauf = '' } = {}, opt
     },
     optionen
   );
+}
+
+// ---------- Gleichwertige Produkte ("andere Firma, gleiches Produkt") ----------
+// Produkte mit derselben "gruppe" gelten als austauschbar (z. B. Barilla Spaghetti und Gut & Günstig Spaghetti).
+
+export function gruppeVon(barcode, alleProdukte) {
+  return alleProdukte.find((p) => p.barcode === barcode)?.gruppe || null;
+}
+
+// Macht a und b gleichwertig. Rückgabe: alle Produkte, die sich dadurch ändern und gespeichert werden müssen.
+// Haben beide schon verschiedene Gruppen, wandert die Gruppe von b komplett in die von a.
+export function gleichsetzen(alleProdukte, a, b, { gruppe } = {}) {
+  if (a.barcode === b.barcode) return [];
+  const ga = a.gruppe || null;
+  const gb = b.gruppe || null;
+  if (ga && ga === gb) return [];
+  const ziel = ga || gb || gruppe || crypto.randomUUID();
+  const geaendert = new Map();
+  const setze = (p) => {
+    if ((p.gruppe || null) !== ziel) geaendert.set(p.barcode, { ...p, gruppe: ziel });
+  };
+  setze(a);
+  setze(b);
+  if (ga && gb) for (const p of alleProdukte) if (p.gruppe === gb) setze(p);
+  return [...geaendert.values()];
 }

@@ -137,3 +137,65 @@ label { display: block; margin: 12px 0 4px; font-weight: 600; }
 h2 { font-size: 20px; margin: 4px 0 8px; }
 details { margin: 12px 0; }
 summary { min-height: 44px; display: flex; align-items: center; font-weight: 600; color: var(--gruen); }
+
+/* Einkaufsliste */
+main.mit-leiste { padding-bottom: calc(var(--tabhoehe) + env(safe-area-inset-bottom) + 100px); }
+.aktionsleiste {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: calc(var(--tabhoehe) + env(safe-area-inset-bottom));
+  z-index: 15;
+  padding: 10px 16px;
+  background: #fff;
+  border-top: 1px solid var(--linie);
+}
+.einkauf-zeile {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--linie);
+  border-radius: 12px;
+  padding: 4px 6px;
+  margin-bottom: 8px;
+}
+.einkauf-zeile.erledigt { background: #f4f4f4; }
+.einkauf-zeile.erledigt .titel { text-decoration: line-through; color: var(--grau); }
+.einkauf-inhalt {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 6px 4px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-weight: 400;
+}
+.kaestchen {
+  flex: 0 0 30px;
+  width: 30px; height: 30px;
+  border: 2px solid var(--gruen);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; line-height: 1;
+}
+.einkauf-zeile.erledigt .kaestchen { background: var(--gruen); }
+.texte { display: flex; flex-direction: column; min-width: 0; }
+.titel { font-weight: 600; overflow-wrap: anywhere; }
+.untertitel { color: var(--grau); font-size: 15px; }
+.anzahl { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; }
+.anzahl .wert { min-width: 44px; text-align: center; font-weight: 600; white-space: nowrap; }
+button.klein { min-height: 44px; min-width: 44px; padding: 0; font-size: 22px; line-height: 1; }
+.weg { flex: 0 0 auto; min-height: 44px; min-width: 40px; padding: 0; background: transparent; color: var(--grau); font-size: 18px; }
+.treffer { display: flex; align-items: center; justify-content: space-between; text-align: left; margin-bottom: 8px; }
+.treffer .plus { font-size: 24px; margin-left: 8px; }
+.treffer .texte .titel { color: var(--text); }
+
+/* Auswahl beim Scan: Ersatz für einen Listeneintrag? */
+.wahlliste { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+button.wahl { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 2px; }
+.wahl-titel { font-weight: 600; color: var(--text); }
+.wahl-info { font-weight: 400; color: var(--grau); font-size: 15px; }
+.marke { margin-left: 6px; font-size: 13px; font-weight: 600; color: var(--gruen); background: #fff; border-radius: 6px; padding: 1px 6px; }

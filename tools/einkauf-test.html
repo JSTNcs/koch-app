@@ -1,0 +1,222 @@
+<!doctype html>
+<!-- Prüft die Einkaufsliste: Datenbank-Umstellung, Suche, Anzahl, Freitext, Abhaken + Einräumen,
+     Scan (Einkauf scannen mit Ersatz-Frage, Zur Liste), Sicherung.
+     Aufruf: node tools/browser-test.mjs tools/einkauf-test.html -->
+<meta charset="utf-8">
+<body style="margin:0;background:#888">
+<pre id="out" style="position:fixed;right:0;top:0;width:300px;background:#fff;font-size:11px;margin:0;padding:4px;z-index:99"></pre>
+<iframe id="app" style="width:390px;height:780px;border:0;background:#fff;display:block;margin:10px"></iframe>
+<script type="module">
+import { alle, speichere, loesche } from '../js/db.js';
+import { neuesProdukt } from '../js/produkt.js';
+import { erstelleSicherung, liesSicherung, stelleWiederHer } from '../js/sicherung.js';
+
+const out = document.getElementById('out');
+const log = (s) => (out.textContent += s + '\n');
+const ok = (b, t) => log((b ? 'PASS ' : 'FAIL ') + t);
+const warte = (ms) => new Promise((r) => setTimeout(r, ms));
+const frame = document.getElementById('app');
+const doc = () => frame.contentDocument;
+const text = () => doc().body.innerText;
+const knopf = (s) => [...doc().querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(s));
+const klick = async (s, ms = 350) => { const k = knopf(s); if (!k) throw new Error('Knopf fehlt: ' + s + ' | Sichtbar: ' + text().slice(0, 250)); k.click(); await warte(ms); };
+const tippe = (el, w) => { el.value = w; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); };
+async function bis(f, ms = 8000) { const t = Date.now(); while (Date.now() - t < ms) { if (f()) return true; await warte(120); } return false; }
+const zeilen = () => [...doc().querySelectorAll('.einkauf-zeile')].map((z) => ({ titel: z.querySelector('.titel').textContent, menge: z.querySelector('.wert').textContent, erledigt: z.classList.contains('erledigt'), el: z }));
+const zeile = (titel) => zeilen().find((z) => z.titel === titel);
+const such = () => doc().querySelector('input[placeholder^="Produkt suchen"]');
+
+async function seite(hash) {
+  const geladen = new Promise((r) => (frame.onload = r));
+  if (frame.contentWindow.location.href.includes('index.html')) { frame.contentWindow.location.hash = hash; frame.contentWindow.location.reload(); }
+  else frame.src = '../index.html' + hash;
+  await geladen;
+  await bis(() => doc().querySelector('#screen')?.children.length, 10000);
+  await warte(250);
+}
+const stabil = (x) => JSON.stringify(x, (k, v) => (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b))) : v));
+const mitPruefziffer = (b12) => b12 + ((10 - ([...b12].reduce((s, d, i) => s + Number(d) * (i % 2 ? 3 : 1), 0) % 10)) % 10);
+
+async function lauf() {
+  // ===== 0. Alte Datenbank (Phase 1, Version 1) nachbauen =====
+  await new Promise((r) => { const q = indexedDB.deleteDatabase('koch-app'); q.onsuccess = q.onerror = q.onblocked = r; });
+  const altVorrat = { id: 'alt1', name: 'Altes Mehl', art: 'menge', menge: 1000, einheit: 'g', da: null, ablauf: null, barcode: '4012345678901' };
+  const altProdukt = { barcode: '4012345678901', name: 'Mehl Type 405', marke: null, art: 'menge', packung: 1000, einheit: 'g', naehrwerte: null, quelle: 'manuell' };
+  await new Promise((res, rej) => {
+    const q = indexedDB.open('koch-app', 1);
+    q.onupgradeneeded = () => { const d = q.result; d.createObjectStore('vorrat', { keyPath: 'id' }); d.createObjectStore('produkte', { keyPath: 'barcode' }); d.createObjectStore('einstellungen', { keyPath: 'key' }); };
+    q.onsuccess = () => { const d = q.result; const tx = d.transaction(['vorrat', 'produkte'], 'readwrite'); tx.objectStore('vorrat').put(altVorrat); tx.objectStore('produkte').put(altProdukt); tx.oncomplete = () => { d.close(); res(); }; };
+    q.onerror = () => rej(q.error);
+  });
+  const v = await alle('vorrat'); // öffnet die Datenbank mit Version 2 -> Umstellung
+  ok(v.length === 1 && v[0].id === 'alt1' && v[0].menge === 1000, 'Umstellung auf Version 2: alter Vorrat ist unverändert da');
+  ok((await alle('produkte')).length === 1 && (await alle('produkte'))[0].name === 'Mehl Type 405' && (await alle('einkauf')).length === 0, 'Umstellung: alte Produkte da, neue Tabelle "einkauf" ist leer und vorhanden');
+
+  // ===== Produkte anlegen =====
+  const P = (b, n, m, packung = 500, einheit = 'g') => neuesProdukt({ barcode: b, name: n, marke: m, art: 'menge', packung, einheit });
+  const barilla = P('4006381333931', 'Barilla Spaghetti', 'Barilla');
+  const gug = P('96385074', 'Gut & Günstig Spaghetti', 'Gut & Günstig');
+  const milch = P('3017620422003', 'Vollmilch', 'Weihenstephan', 1000, 'ml');
+  const salz = neuesProdukt({ barcode: '036000291452', name: 'Salz', art: 'da_leer' });
+  for (const p of [barilla, gug, milch, salz]) await speichere('produkte', p);
+
+  // ===== 1. Suche und Hinzufügen =====
+  await seite('#/einkauf');
+  ok(text().includes('Die Liste ist leer'), 'Einkauf-Tab: leere Liste mit Hinweis');
+  tippe(such(), 'spag'); await warte(200);
+  const treffer = () => [...doc().querySelectorAll('.treffer')];
+  ok(treffer().length === 2, 'Suche "spag" findet 2 Produkte');
+  tippe(such(), 'gunstig'); await warte(200);
+  ok(treffer().length === 1 && treffer()[0].textContent.includes('Gut & Günstig'), 'Suche "gunstig" findet "Günstig" (ohne Umlaut)');
+  tippe(such(), 'xyzxyz'); await warte(200);
+  ok(text().includes('Nichts gefunden'), 'Suche ohne Treffer erklärt, was man tun kann');
+  tippe(such(), 'barilla'); await warte(200);
+  treffer()[0].click(); await warte(400);
+  ok(zeilen().length === 1 && zeilen()[0].titel === 'Barilla Spaghetti' && zeilen()[0].menge === '1×', 'Barilla Spaghetti steht mit 1× auf der Liste');
+  ok(text().includes('500 g'), 'Packungsgröße wird gezeigt');
+  ok(such().value === '', 'Suchfeld ist nach dem Hinzufügen leer');
+  tippe(such(), 'barilla'); await warte(200);
+  treffer()[0].click(); await warte(400);
+  ok(zeilen().length === 1 && zeilen()[0].menge === '2×' && text().includes('stand schon drauf'), 'Nochmal Barilla: nicht doppelt, Anzahl 2×');
+
+  // ===== 2. Anzahl =====
+  const plusMinus = (titel, sym) => [...zeile(titel).el.querySelectorAll('.anzahl button')].find((b) => b.textContent === sym);
+  plusMinus('Barilla Spaghetti', '+').click(); await warte(300);
+  ok(zeile('Barilla Spaghetti').menge === '3×', '+ erhöht auf 3×');
+  plusMinus('Barilla Spaghetti', '−').click(); await warte(200);
+  plusMinus('Barilla Spaghetti', '−').click(); await warte(200);
+  plusMinus('Barilla Spaghetti', '−').click(); await warte(300);
+  ok(zeile('Barilla Spaghetti').menge === '1×', '− geht nie unter 1×');
+
+  // ===== 3. Freitext =====
+  await klick('＋ Ohne Marke');
+  ok(text().includes('Ohne Marke aufschreiben'), 'Freitext-Formular öffnet');
+  await klick('Auf die Liste');
+  ok(text().includes('Bitte einen Namen'), 'Freitext ohne Namen wird abgelehnt');
+  const f = [...doc().querySelectorAll('input[type=text]')];
+  tippe(f[0], 'Zwiebeln'); tippe(f[1], '3');
+  await klick('Auf die Liste', 450);
+  ok(zeile('Zwiebeln')?.menge === '3 Stück', 'Zwiebeln 3 Stück auf der Liste');
+  await klick('＋ Ohne Marke');
+  const f2 = [...doc().querySelectorAll('input[type=text]')];
+  tippe(f2[0], ' zwiebeln '); tippe(f2[1], '2');
+  await klick('Auf die Liste', 450);
+  ok(zeilen().filter((z) => z.titel.toLowerCase() === 'zwiebeln').length === 1 && zeile('Zwiebeln').menge === '5 Stück', 'Freitext nicht doppelt: 5 Stück');
+
+  // ===== 4. Abhaken, Einräumen =====
+  zeile('Barilla Spaghetti').el.querySelector('.einkauf-inhalt').click(); await warte(300);
+  ok(zeile('Barilla Spaghetti').erledigt && zeilen()[zeilen().length - 1].titel === 'Barilla Spaghetti', 'Abgehakt: durchgestrichen und ganz unten');
+  ok(text().includes('1 Abgehakte in den Vorrat'), 'Unten erscheint "1 Abgehakte in den Vorrat"');
+  zeile('Zwiebeln').el.querySelector('.einkauf-inhalt').click(); await warte(300);
+  ok(text().includes('2 Abgehakte in den Vorrat'), '2 Abgehakte');
+  zeile('Zwiebeln').el.querySelector('.einkauf-inhalt').click(); await warte(300);
+  ok(text().includes('1 Abgehakte in den Vorrat') && !zeile('Zwiebeln').erledigt, 'Haken wieder entfernen funktioniert');
+  const vorherVorrat = (await alle('vorrat')).length;
+  await klick('✔ 1 Abgehakte in den Vorrat', 500);
+  ok(text().includes('1 Eintrag liegt jetzt im Vorrat'), 'Meldung nach dem Einräumen');
+  const vorrat1 = await alle('vorrat');
+  const b = vorrat1.find((e) => e.barcode === '4006381333931' && e.name === 'Barilla Spaghetti');
+  ok(vorrat1.length === vorherVorrat + 1 && b && b.menge === 500 && b.einheit === 'g', 'Barilla Spaghetti 500 g liegt im Vorrat');
+  ok(!zeile('Barilla Spaghetti') && !!zeile('Zwiebeln'), 'Eingeräumtes ist von der Liste weg, Rest bleibt');
+  ok(!doc().querySelector('.aktionsleiste'), 'Einräum-Leiste ist wieder weg');
+
+  // ===== 5. Entfernen =====
+  zeile('Zwiebeln').el.querySelector('.weg').click(); await warte(300);
+  ok(zeilen().length === 0, '✕ entfernt den Eintrag');
+
+  // ===== 6. Einkauf scannen: Ersatz für einen Listeneintrag =====
+  tippe(such(), 'barilla'); await warte(200); treffer()[0].click(); await warte(300);
+  tippe(such(), 'barilla'); await warte(200); treffer()[0].click(); await warte(300); // Barilla 2×
+  tippe(such(), 'vollmilch'); await warte(200); treffer()[0].click(); await warte(300);
+  ok(zeilen().length === 2 && zeile('Barilla Spaghetti').menge === '2×', 'Liste: Barilla 2× und Vollmilch');
+  await klick('📷 Einkauf scannen', 600);
+  ok(text().includes('Einkauf scannen'), 'Scan-Ansicht "Einkauf scannen"');
+  const tippeCode = async (code) => { const e = doc().querySelector('input[inputmode="numeric"]'); e.closest('details').open = true; tippe(e, code); await klick('Suchen', 300); };
+  await tippeCode('96385074'); // Gut & Günstig, steht nicht auf der Liste
+  ok(await bis(() => text().includes('Produkt prüfen')), 'Formular für Gut & Günstig');
+  ok(text().includes('kennt die App schon') && !text().includes('Passt zu deiner Liste'), 'bekanntes Produkt, noch keine Verbindung zur Liste');
+  await klick('Zum Vorrat', 500);
+  ok(text().includes('Steht nicht auf der Liste') && text().includes('Vorschlag'), 'Frage "Ersatz für …?" mit Vorschlag');
+  const wahl = [...doc().querySelectorAll('.wahl')];
+  ok(wahl.length === 2 && wahl[0].textContent.includes('Barilla Spaghetti') && wahl[0].textContent.includes('Vorschlag'), 'Zwei offene Einträge zur Auswahl, ähnlicher (Spaghetti) zuerst');
+  const vor = (await alle('vorrat')).length;
+  wahl[0].click(); await warte(600);
+  ok(text().includes('✔ Hinzugefügt') && text().includes('Gut & Günstig Spaghetti: 500 g'), 'Gut & Günstig 500 g wurde eingetragen');
+  ok(text().includes('Auf der Liste fehlen noch 1× Barilla Spaghetti'), 'Zettel: 2 gebraucht, 1 gekauft, 1 bleibt');
+  ok(text().includes('gleichwertig'), 'Meldung: als gleichwertig gemerkt');
+  const vorrat2 = await alle('vorrat');
+  ok(vorrat2.length === vor + 1 && vorrat2.some((e) => e.barcode === '96385074' && e.menge === 500) && vorrat2.filter((e) => e.barcode === '4006381333931' && e.name === 'Barilla Spaghetti').length === 1, 'Im Vorrat liegt das GESCANNTE Produkt (Gut & Günstig), nicht ein zweites Barilla');
+  const prods = await alle('produkte');
+  const gB = prods.find((p) => p.barcode === '4006381333931').gruppe, gG = prods.find((p) => p.barcode === '96385074').gruppe;
+  ok(gB && gB === gG, 'Beide Produkte haben jetzt dieselbe Gruppe (gleichwertig)');
+  ok((await alle('einkauf')).find((e) => e.barcode === '4006381333931')?.anzahl === 1, 'In der Datenbank: Barilla auf der Liste noch 1×');
+
+  // Zweites Mal: automatisch erkannt
+  await klick('📷 Nächstes Produkt', 600);
+  await tippeCode('96385074');
+  ok(await bis(() => text().includes('Produkt prüfen')), 'Formular beim zweiten Scan');
+  ok(text().includes('Passt zu deiner Liste: Barilla Spaghetti (1×)'), 'Zweites Mal: Gut & Günstig wird automatisch Barilla zugeordnet');
+  await klick('Zum Vorrat', 500);
+  ok(text().includes('Von der Liste genommen: Barilla Spaghetti') && !text().includes('Steht nicht auf der Liste'), 'Ohne Rückfrage von der Liste genommen');
+  ok((await alle('vorrat')).find((e) => e.barcode === '96385074')?.menge === 1000, 'Vorrat: Gut & Günstig jetzt 1000 g');
+  await klick('Fertig', 500);
+  ok(zeilen().length === 1 && !!zeile('Vollmilch'), 'Zurück auf der Liste: nur noch Vollmilch');
+
+  // ===== 7. Unbekanntes Produkt (ohne Internet), "Kein Ersatz" =====
+  frame.contentWindow.fetch = () => Promise.reject(new TypeError('Failed to fetch'));
+  const neuCode = mitPruefziffer('400000000001');
+  await klick('📷 Einkauf scannen', 600);
+  await tippeCode(neuCode);
+  ok(await bis(() => text().includes('Produkt prüfen')) && text().includes('Keine Verbindung'), 'Unbekanntes Produkt offline: Handeintrag');
+  const g = [...doc().querySelectorAll('input[type=text]')];
+  tippe(g[0], 'Hafermilch'); tippe(g[1], '1000');
+  doc().querySelectorAll('select')[1].value = 'ml';
+  await klick('Zum Vorrat', 500);
+  ok(text().includes('Steht nicht auf der Liste'), 'Auch ein neues Produkt fragt nach Ersatz');
+  await klick('Kein Ersatz', 600);
+  ok(text().includes('Hafermilch: 1 l') && !text().includes('gleichwertig'), 'Kein Ersatz: nur in den Vorrat, nichts gemerkt');
+  ok((await alle('einkauf')).length === 1 && (await alle('einkauf'))[0].name === 'Vollmilch', 'Vollmilch steht weiter auf der Liste');
+  ok((await alle('produkte')).find((p) => p.barcode === neuCode)?.gruppe === null, 'Hafermilch hat keine Gruppe');
+  await klick('Fertig', 500);
+
+  // ===== 8. Produkt zur Liste scannen =====
+  await klick('📷 Zur Liste', 600);
+  ok(text().includes('Produkt für die Liste scannen'), 'Scan-Ansicht "Produkt für die Liste scannen"');
+  await tippeCode('036000291452'); // Salz, bekannt
+  ok(await bis(() => text().includes('Produkt prüfen')), 'Formular für Salz');
+  ok(!text().includes('Haltbar bis'), 'Für die Liste kein Ablaufdatum');
+  await klick('Auf die Liste', 500);
+  ok(text().includes('✔ Auf der Liste') && text().includes('Salz'), 'Salz kommt auf die Liste');
+  const vorratVorher = JSON.stringify(await alle('vorrat'));
+  await klick('Fertig', 500);
+  ok(!!zeile('Salz') && zeilen().length === 2, 'Liste: Vollmilch und Salz');
+  ok(JSON.stringify(await alle('vorrat')) === vorratVorher, '"Zur Liste" verändert den Vorrat nicht');
+
+  // ===== 9. Sicherung enthält die Liste =====
+  const s = await erstelleSicherung();
+  ok(s.anzahlEinkauf === 2 && JSON.parse(s.text).daten.einkauf.length === 2, 'Sicherung enthält 2 Listeneinträge');
+  const listeVorher = stabil((await alle('einkauf')).sort((a, b) => a.id.localeCompare(b.id)));
+  await loesche('einkauf', (await alle('einkauf'))[0].id);
+  await stelleWiederHer(liesSicherung(s.text));
+  ok(stabil((await alle('einkauf')).sort((a, b) => a.id.localeCompare(b.id))) === listeVorher, 'Einspielen stellt die Liste wieder her');
+  await seite('#/einstellungen');
+  const feld = doc().querySelector('input[type=file]');
+  const dt = new DataTransfer(); dt.items.add(new File([s.text], 's.json', { type: 'application/json' })); feld.files = dt.files; feld.dispatchEvent(new Event('change'));
+  await warte(600);
+  ok(text().includes('2 auf der Einkaufsliste'), 'Rückfrage beim Einspielen nennt "2 auf der Einkaufsliste"');
+  await klick('Abbrechen', 400);
+
+  // ===== 10. Layout =====
+  await seite('#/einkauf');
+  zeile('Salz').el.querySelector('.einkauf-inhalt').click(); await warte(300);
+  ok(!/null|undefined|object/.test(text()), 'kein "null"/"undefined" sichtbar');
+  ok(doc().documentElement.scrollWidth <= 390, 'kein seitliches Scrollen (' + doc().documentElement.scrollWidth + ')');
+  const r = doc().querySelector('.einkauf-zeile').getBoundingClientRect();
+  ok(r.height >= 56, 'Zeilen sind hoch genug zum Treffen (' + Math.round(r.height) + ' px)');
+  await seite('#/vorrat');
+  ok(!doc().querySelector('#screen').classList.contains('mit-leiste') && !doc().querySelector('.aktionsleiste'), 'Vorrat-Tab zeigt keine Einräum-Leiste vom Einkauf-Tab');
+  await seite('#/einkauf');
+  log('FERTIG');
+}
+lauf().catch((e) => { log('FAIL Fehler: ' + e.message); log('FERTIG'); });
+</script>
