@@ -1,0 +1,152 @@
+<!doctype html>
+<!-- Prüft Sicherung: Export (Teilen und Download), Hinweis nach 7 Tagen, Import, kaputte Dateien.
+     Aufruf: node tools/browser-test.mjs tools/backup-test.html -->
+<meta charset="utf-8">
+<body style="margin:0;background:#888">
+<pre id="out" style="position:fixed;right:0;top:0;width:300px;background:#fff;font-size:11px;margin:0;padding:4px;z-index:9"></pre>
+<iframe id="app" style="width:390px;height:780px;border:0;background:#fff;display:block;margin:10px"></iframe>
+<script type="module">
+import { alle, speichere, loesche, hole } from '../js/db.js';
+import { neuerEintrag, setzeDa } from '../js/pantry.js';
+import { neuesProdukt } from '../js/produkt.js';
+
+const out = document.getElementById('out');
+const log = (s) => (out.textContent += s + '\n');
+const ok = (b, t) => log((b ? 'PASS ' : 'FAIL ') + t);
+const warte = (ms) => new Promise((r) => setTimeout(r, ms));
+const frame = document.getElementById('app');
+const doc = () => frame.contentDocument;
+const text = () => doc().body.innerText;
+const knopf = (s) => [...doc().querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(s));
+const klick = async (s, ms = 400) => { const k = knopf(s); if (!k) throw new Error('Knopf fehlt: ' + s + ' | Sichtbar: ' + text().slice(0, 300)); k.click(); await warte(ms); };
+async function bis(f, ms = 10000) { const t = Date.now(); while (Date.now() - t < ms) { if (f()) return true; await warte(150); } return false; }
+
+async function seite(hash) {
+  const geladen = new Promise((r) => (frame.onload = r));
+  if (frame.contentWindow.location.href.includes('index.html')) {
+    frame.contentWindow.location.hash = hash;
+    frame.contentWindow.location.reload();
+  } else frame.src = '../index.html' + hash;
+  await geladen;
+  await bis(() => doc().querySelector('#screen')?.children.length, 10000);
+  await warte(300);
+}
+const gehe = async (hash) => { frame.contentWindow.location.hash = hash; await warte(500); };
+
+// Datei in das versteckte Auswahlfeld legen (wie wenn man sie am iPhone auswählt)
+async function waehleDatei(inhalt, name = 'sicherung.json') {
+  const feld = doc().querySelector('input[type=file]');
+  const dt = new DataTransfer();
+  dt.items.add(new File([inhalt], name, { type: 'application/json' }));
+  feld.files = dt.files;
+  feld.dispatchEvent(new Event('change'));
+  await warte(600);
+}
+const stand = async () => JSON.stringify({ v: (await alle('vorrat')).sort((a, b) => a.id.localeCompare(b.id)), p: (await alle('produkte')).sort((a, b) => a.barcode.localeCompare(b.barcode)) });
+
+async function lauf() {
+  await new Promise((r) => { const q = indexedDB.deleteDatabase('koch-app'); q.onsuccess = q.onerror = q.onblocked = r; });
+
+  // ---- Daten anlegen ----
+  const nudeln = neuerEintrag({ name: 'Nudeln', art: 'menge', menge: 750, einheit: 'g', barcode: '4006381333931', ablauf: '2027-01-31' }, { id: 'n1' });
+  const salz = setzeDa(neuerEintrag({ name: 'Salz', art: 'da_leer' }, { id: 's1' }), false);
+  const milch = neuerEintrag({ name: 'Milch', art: 'menge', menge: 1000, einheit: 'ml' }, { id: 'm1' });
+  for (const e of [nudeln, salz, milch]) await speichere('vorrat', e);
+  await speichere('produkte', neuesProdukt({ barcode: '4006381333931', name: 'Nudeln', art: 'menge', packung: 500, einheit: 'g', naehrwerte: { kcal: 350, eiweiss: 12, kohlenhydrate: 70, fett: 2 }, quelle: 'off' }));
+  await speichere('produkte', neuesProdukt({ barcode: '3017620422003', name: 'Nuss-Nugat-Creme', art: 'menge', packung: 400, einheit: 'g' }));
+  const vorher = await stand();
+
+  // ---- Hinweis: noch nie gesichert ----
+  await seite('#/vorrat');
+  ok(text().includes('noch keine Sicherung'), 'Vorrat: Hinweis "noch keine Sicherung" bei vorhandenen Daten');
+  await klick('Jetzt sichern');
+  ok(text().includes('Version v') && text().includes('Letzte Sicherung: noch nie'), 'Einstellungen öffnen, "noch nie" + Versionsnummer sichtbar');
+
+  // ---- Export wie am iPhone (Teilen-Menü) ----
+  let geteilt = null;
+  frame.contentWindow.navigator.canShare = () => true;
+  frame.contentWindow.navigator.share = async (d) => { geteilt = d; };
+  await gehe('#/vorrat'); await gehe('#/einstellungen');
+  ok(!!knopf('💾 Sicherung speichern'), 'Teilen-Knopf erscheint, wenn der Browser Dateien teilen kann');
+  await klick('💾 Sicherung speichern', 800);
+  ok(geteilt && geteilt.files.length === 1, 'Teilen-Menü bekommt genau eine Datei');
+  const sicherungsText = geteilt ? await geteilt.files[0].text() : '';
+  ok(/^koch-app-sicherung-\d{4}-\d{2}-\d{2}\.json$/.test(geteilt?.files[0].name || ''), 'Dateiname mit Datum: ' + geteilt?.files[0].name);
+  let json = {};
+  try { json = JSON.parse(sicherungsText); } catch {}
+  ok(json.app === 'koch-app' && json.daten?.vorrat?.length === 3 && json.daten?.produkte?.length === 2, 'Datei enthält 3 Vorräte und 2 Produkte');
+  ok(!sicherungsText.includes('letzteSicherung'), '"letzteSicherung" steht nicht in der Datei');
+  ok(text().includes('Sicherung erstellt') && text().includes('(heute)'), 'Bildschirm bestätigt und zeigt "heute"');
+  ok(!!(await hole('einstellungen', 'letzteSicherung')), 'Datum der letzten Sicherung gemerkt');
+
+  // ---- Abbrechen im Teilen-Menü zählt nicht als Sicherung ----
+  await new Promise((r) => { const t = indexedDB.open('koch-app'); t.onsuccess = () => { const tx = t.result.transaction('einstellungen', 'readwrite'); tx.objectStore('einstellungen').delete('letzteSicherung'); tx.oncomplete = () => { t.result.close(); r(); }; }; });
+  frame.contentWindow.navigator.share = async () => { throw Object.assign(new Error('x'), { name: 'AbortError' }); };
+  await gehe('#/vorrat'); await gehe('#/einstellungen');
+  await klick('💾 Sicherung speichern', 600);
+  ok(!(await hole('einstellungen', 'letzteSicherung')), 'Abbrechen im Teilen-Menü: nicht als gesichert gezählt');
+
+  // ---- Download-Weg (ohne Teilen) ----
+  frame.contentWindow.navigator.canShare = () => false;
+  const blobs = [];
+  const orig = frame.contentWindow.URL.createObjectURL.bind(frame.contentWindow.URL);
+  frame.contentWindow.URL.createObjectURL = (b) => { blobs.push(b); return orig(b); };
+  frame.contentWindow.HTMLAnchorElement.prototype.click = function () { blobs.push(this.download); };
+  await gehe('#/vorrat'); await gehe('#/einstellungen');
+  await klick('💾 Sicherung herunterladen', 800);
+  ok(blobs.length === 2 && (await blobs[0].text()).includes('"koch-app"') && blobs[1].endsWith('.json'), 'Download-Weg erzeugt eine .json-Datei');
+  ok(!!(await hole('einstellungen', 'letzteSicherung')), 'Download zählt als Sicherung');
+
+  // ---- Hinweis verschwindet nach Sicherung, kommt nach 8 Tagen wieder ----
+  await gehe('#/vorrat');
+  ok(!text().includes('Sicherung war') && !text().includes('noch keine Sicherung'), 'Vorrat: nach frischer Sicherung kein Hinweis');
+  await speichere('einstellungen', { key: 'letzteSicherung', value: new Date(Date.now() - 8 * 86400000).toISOString() });
+  await seite('#/vorrat');
+  ok(/vor 8 Tagen/.test(text()), 'Vorrat: Hinweis "vor 8 Tagen" bei alter Sicherung');
+  await speichere('einstellungen', { key: 'letzteSicherung', value: new Date().toISOString() });
+
+  // ---- Daten verändern, dann Sicherung einspielen ----
+  await loesche('vorrat', 'n1');
+  await speichere('vorrat', neuerEintrag({ name: 'Anderes', art: 'menge', menge: 1, einheit: 'stk' }, { id: 'neu' }));
+  await loesche('produkte', '3017620422003');
+  ok((await stand()) !== vorher, 'Daten wurden verändert (Vorbereitung)');
+  await seite('#/einstellungen');
+  await waehleDatei(sicherungsText);
+  ok(text().includes('Sicherung einspielen?') && text().includes('3 Vorrat, 2 Produkte') && text().includes('ersetzt deine jetzigen Daten'), 'Zusammenfassung vor dem Einspielen mit Warnung');
+  await klick('Abbrechen', 500);
+  ok((await stand()) !== vorher, 'Abbrechen verändert nichts');
+  await waehleDatei(sicherungsText);
+  await klick('Ja, ersetzen', 800);
+  ok(text().includes('✔ Eingespielt: 3 Vorrat, 2 Produkte'), 'Erfolgsmeldung nach dem Einspielen');
+  ok((await stand()) === vorher, 'Danach ist alles wieder genau wie vorher (inkl. Gewürz "leer", Ablaufdatum, Nährwerte)');
+  ok(!!(await hole('einstellungen', 'letzteSicherung')), 'Datum der letzten Sicherung bleibt erhalten');
+
+  // ---- Kaputte Dateien ----
+  const jetzt = await stand();
+  const kaputt = [
+    ['hallo, keine Sicherung', /keine Sicherung/],
+    ['{"app":"andere"}', /keine Sicherung der Koch-App/],
+    [JSON.stringify({ ...json, version: 9 }), /neueren Version/],
+    [JSON.stringify({ ...json, daten: { ...json.daten, vorrat: [{ id: 'x', name: '', art: 'menge', menge: 1, einheit: 'g' }] } }), /Eintrag 1/],
+  ];
+  for (const [inhalt, muster] of kaputt) {
+    await seite('#/einstellungen');
+    await waehleDatei(inhalt);
+    ok(muster.test(text()) && text().includes('Sicherung einspielen') && !text().includes('Ja, ersetzen'), 'kaputte Datei abgelehnt: ' + inhalt.slice(0, 22));
+  }
+  ok((await stand()) === jetzt, 'kaputte Dateien verändern keine Daten');
+
+  // ---- Leere Sicherung einspielen (alles leer) ----
+  await seite('#/einstellungen');
+  await waehleDatei(JSON.stringify({ app: 'koch-app', version: 1, erstelltAm: new Date().toISOString(), daten: { vorrat: [], produkte: [], einstellungen: [] } }));
+  await klick('Ja, ersetzen', 800);
+  ok((await alle('vorrat')).length === 0 && (await alle('produkte')).length === 0, 'leere Sicherung leert Vorrat und Produkte');
+
+  // ---- Layout ----
+  ok(!/null|undefined|object/.test(text()), 'kein "null"/"undefined" sichtbar');
+  ok(doc().documentElement.scrollWidth <= 390, 'kein seitliches Scrollen (' + doc().documentElement.scrollWidth + ')');
+  await seite('#/einstellungen');
+  log('FERTIG');
+}
+lauf().catch((e) => { log('FAIL Fehler: ' + e.message); log('FERTIG'); });
+</script>

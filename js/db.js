@@ -62,3 +62,32 @@ export async function datenSchuetzen() {
     return false;
   }
 }
+
+// Alle Daten auf einmal lesen (für die Sicherung).
+export async function alleDaten() {
+  const [vorrat, produkte, einstellungen] = await Promise.all([alle('vorrat'), alle('produkte'), alle('einstellungen')]);
+  return { vorrat, produkte, einstellungen };
+}
+
+// Ersetzt Vorrat, Produkte und Einstellungen auf einmal. Entweder gelingt alles oder nichts
+// (eine Transaktion). Das Datum der letzten Sicherung bleibt erhalten, es gehört zu diesem Handy.
+export async function ersetzeDaten({ vorrat, produkte, einstellungen }) {
+  const letzte = await hole('einstellungen', 'letzteSicherung');
+  const db = await oeffneDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(['vorrat', 'produkte', 'einstellungen'], 'readwrite');
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+    const tabellen = [
+      ['vorrat', vorrat],
+      ['produkte', produkte],
+      ['einstellungen', [...einstellungen, ...(letzte ? [letzte] : [])]],
+    ];
+    for (const [name, liste] of tabellen) {
+      const speicher = tx.objectStore(name);
+      speicher.clear();
+      for (const eintrag of liste) speicher.put(eintrag);
+    }
+  });
+}

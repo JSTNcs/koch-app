@@ -44,7 +44,7 @@ export const ROUTES = [
     label: 'Mehr',
     title: 'Einstellungen',
     icon: '⚙️',
-    load: leer('Hier kommen Sicherung und Einstellungen hin.'),
+    load: () => import('./screens/einstellungen.js'),
   },
 ];
 

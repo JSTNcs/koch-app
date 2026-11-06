@@ -41,6 +41,12 @@ test('jede App-Datei steht in der Offline-Liste', () => {
   }
 });
 
+test('Versionsnummer in sw.js und js/version.js ist gleich', () => {
+  const sw = swText.match(/const VERSION = '([^']+)'/)[1];
+  const app = readFileSync(join(root, 'js/version.js'), 'utf8').match(/APP_VERSION = '([^']+)'/)[1];
+  assert.equal(app, sw);
+});
+
 test('die Startdateien sind in der Offline-Liste', () => {
   const liste = new Set(assetListe());
   for (const d of ['index.html', 'manifest.webmanifest']) assert.ok(liste.has(d), d);

@@ -1,5 +1,6 @@
 import { h } from '../dom.js';
 import { alle, speichere, loesche, datenSchuetzen } from '../db.js';
+import { ladeHinweis } from '../sicherung.js';
 import {
   neuerEintrag,
   mengeAendern,
@@ -14,8 +15,11 @@ export async function render(container) {
   datenSchuetzen();
   let liste = [];
 
+  let sicherungsHinweis = null;
+
   async function laden() {
     liste = sortiere(await alle('vorrat'));
+    sicherungsHinweis = await ladeHinweis();
   }
 
   async function aendern(eintrag) {
@@ -36,7 +40,15 @@ export async function render(container) {
       ? h('ul', { class: 'liste' }, liste.map(eintragKarte))
       : h('p', { class: 'leer-text' }, 'Dein Vorrat ist leer. Tippe auf „Scannen“ oder „Von Hand“.');
 
-    const teile = [kopf, fehler ? h('p', { class: 'hinweis fehler' }, fehler) : null, inhalt].filter(Boolean);
+    const erinnerung = sicherungsHinweis
+      ? h(
+          'div',
+          { class: 'hinweis warnung' },
+          h('p', { style: 'margin:0 0 10px' }, sicherungsHinweis),
+          h('button', { class: 'zweit voll', onclick: () => (location.hash = '#/einstellungen') }, 'Jetzt sichern')
+        )
+      : null;
+    const teile = [kopf, erinnerung, fehler ? h('p', { class: 'hinweis fehler' }, fehler) : null, inhalt].filter(Boolean);
     container.replaceChildren(...teile);
   }
 
