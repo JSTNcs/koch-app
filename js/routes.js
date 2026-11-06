@@ -9,7 +9,7 @@ export const ROUTES = [
     label: 'Vorrat',
     title: 'Vorrat',
     icon: '🥫',
-    load: leer('Hier steht bald dein Vorrat.'),
+    load: () => import('./screens/vorrat.js'),
   },
   {
     id: 'einkauf',

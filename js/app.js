@@ -45,9 +45,11 @@ zeigeBildschirm();
 // Offline-Fähigkeit: Service Worker anmelden
 if ('serviceWorker' in navigator) {
   let schonNeuGeladen = false;
+  // Gab es beim Start schon einen Service Worker? Dann ist ein späterer Wechsel ein Update.
+  const warSchonInstalliert = Boolean(navigator.serviceWorker.controller);
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    // Neue App-Version ist aktiv geworden: einmal neu laden.
-    if (schonNeuGeladen || !navigator.serviceWorker.controller) return;
+    // Neue App-Version ist aktiv geworden: einmal neu laden (aber nicht beim allerersten Start).
+    if (schonNeuGeladen || !warSchonInstalliert) return;
     schonNeuGeladen = true;
     location.reload();
   });

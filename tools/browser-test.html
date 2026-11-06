@@ -1,0 +1,95 @@
+<!doctype html>
+<!-- Bedient die App automatisch in einem Rahmen (390 px breit) und schreibt PASS/FAIL ins <pre>.
+     Aufruf: Server starten (python -m http.server 8080), dann Edge headless mit --dump-dom auf
+     http://localhost:8080/tools/browser-test.html#vorrat  -->
+<meta charset="utf-8">
+<body style="margin:0;background:#888">
+<pre id="out" style="position:fixed;right:0;top:0;width:300px;background:#fff;font-size:11px;margin:0;padding:4px;z-index:9"></pre>
+<iframe id="app" style="width:390px;height:780px;border:0;background:#fff;display:block;margin:10px"></iframe>
+<script>
+const out = document.getElementById('out');
+const log = (s) => (out.textContent += s + '\n');
+const ok = (bedingung, text) => log((bedingung ? 'PASS ' : 'FAIL ') + text);
+const warte = (ms) => new Promise((r) => setTimeout(r, ms));
+const frame = document.getElementById('app');
+const doc = () => frame.contentDocument;
+const text = () => doc().body.innerText;
+const knopf = (beschriftung) => [...doc().querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(beschriftung));
+const klick = async (b) => { const k = knopf(b); if (!k) throw new Error('Knopf fehlt: ' + b); k.click(); await warte(250); };
+const tippe = (el, wert) => { el.value = wert; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); };
+
+async function laden() {
+  const geladen = new Promise((r) => (frame.onload = r));
+  if (frame.contentWindow.location.href.includes('index.html')) frame.contentWindow.location.reload();
+  else frame.src = '../index.html#/vorrat';
+  await geladen;
+  // Warten, bis die App ihren Bildschirm aufgebaut hat (beim ersten Start dauert das etwas länger)
+  for (let i = 0; i < 40; i++) {
+    await warte(250);
+    if (doc().querySelector('#screen')?.children.length) break;
+  }
+  frame.contentWindow.confirm = () => true;
+}
+
+async function lauf() {
+  await new Promise((r) => { const q = indexedDB.deleteDatabase('koch-app'); q.onsuccess = q.onerror = q.onblocked = r; });
+  await laden();
+  ok(text().includes('Vorrat ist leer'), 'leerer Vorrat zeigt Hinweis');
+
+  // Nudeln anlegen
+  await klick('＋ Hinzufügen');
+  const felder = doc().querySelectorAll('input');
+  tippe(felder[0], 'Nudeln');
+  tippe(felder[1], '500');
+  await klick('Speichern');
+  ok(text().includes('Nudeln') && text().includes('500 g'), 'Nudeln mit 500 g angelegt');
+
+  await klick('+ 50');
+  ok(text().includes('550 g'), '+ 50 ergibt 550 g');
+  await klick('− 50'); await klick('− 50');
+  ok(text().includes('450 g'), 'zweimal − 50 ergibt 450 g');
+
+  // Falsche Eingabe
+  await klick('＋ Hinzufügen');
+  tippe(doc().querySelectorAll('input')[0], 'Reis');
+  tippe(doc().querySelectorAll('input')[1], 'abc');
+  await klick('Speichern');
+  ok(text().includes('gültige Menge'), 'Fehlermeldung bei "abc" als Menge');
+  await klick('Abbrechen');
+
+  // Gewürz
+  await klick('＋ Hinzufügen');
+  const art = doc().querySelector('select');
+  tippe(doc().querySelectorAll('input')[0], 'Salz');
+  art.value = 'da_leer'; art.dispatchEvent(new Event('change'));
+  await warte(100);
+  await klick('Speichern');
+  ok(/Salz\s*da/.test(text()), 'Salz als "da" gespeichert');
+  await klick('Ist leer');
+  ok(/Salz\s*leer/.test(text()), 'Salz auf "leer" gestellt');
+
+  // Neu laden: Daten bleiben
+  await laden();
+  ok(text().includes('Nudeln') && text().includes('450 g') && /Salz\s*leer/.test(text()), 'Daten bleiben nach dem Neuladen');
+
+  // Ändern
+  const aendern = [...doc().querySelectorAll('button')].find((b) => b.textContent === 'Ändern');
+  aendern.click(); await warte(250);
+  ok(text().includes('Eintrag ändern'), 'Formular zum Ändern öffnet');
+  await klick('Abbrechen');
+
+  // Löschen
+  const loeschen = [...doc().querySelectorAll('button')].find((b) => b.textContent === 'Löschen');
+  loeschen.click(); await warte(300);
+  const rest = doc().querySelectorAll('.eintrag').length;
+  ok(rest === 1, 'Löschen entfernt einen Eintrag (übrig: ' + rest + ')');
+
+  ok(!/null|undefined|object/.test(text()), 'kein "null"/"undefined"/"object" im sichtbaren Text');
+
+  // Handy-Format: kein seitliches Scrollen
+  ok(doc().documentElement.scrollWidth <= 390, 'kein seitliches Scrollen (Breite ' + doc().documentElement.scrollWidth + ')');
+  await klick('＋ Hinzufügen'); // Formular offen lassen, damit das Bild es zeigt
+  log('FERTIG');
+}
+lauf().catch((e) => { log('FAIL Fehler: ' + e.message); log('FERTIG'); });
+</script>
