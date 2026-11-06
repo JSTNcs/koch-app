@@ -20,6 +20,8 @@ Der Nutzer hat keine Programmiererfahrung: Antworten auf Deutsch, einfach erklä
 - **Hosting:** statisch und kostenlos (z. B. GitHub Pages). HTTPS ist Pflicht, sonst gibt es keine Kamera.
 - **Keine Kosten:** nur kostenlose Dienste und Bibliotheken.
 - **Barcode:** über eine JS-Bibliothek mit der Kamera (Safari auf dem iPhone hat keinen eingebauten Barcode-Scanner im Browser).
+  Entschieden und eingebaut: `barcode-detector` 3.2.3 (MIT) mit `zxing-wasm` 3.1.6 (MIT) und ZXing-C++ (Apache-2.0),
+  lokal in `lib/`, Details und Lizenztexte in `lib/README.md`. Kein CDN.
 - **Produktdaten:** Open Food Facts (Name, Packungsgröße, Nährwerte). Fehlt ein Produkt, trägt der Nutzer es von Hand ein und die App merkt es sich.
 - **Lose Zutaten** (Zwiebel, Hähnchenbrust): eingebaute Tabelle mit Standard-Nährwerten aus einer frei nutzbaren Quelle (z. B. USDA FoodData Central; Lizenz vorher prüfen und hier eintragen).
 - **Sicherung:** Export und Import als Datei per Knopfdruck. Hinweis in der App, wenn die letzte Sicherung älter als 7 Tage ist.
