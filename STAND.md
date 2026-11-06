@@ -28,7 +28,7 @@ Nächste Phase: 2 (Einkaufsliste).
 - Bibliotheken lokal in `lib/` (MIT und Apache-2.0, siehe `lib/README.md`).
 
 ## Tests
-- `npm test`: 71 Logik-Tests (Node, keine Installation nötig).
+- `npm test`: 70 Logik-Tests im Ordner `tests/` (Node, keine Installation nötig; die Browser-Skripte in `tools/` laufen nicht dabei mit).
 - Browser-Tests im Handy-Format (390 px): erst `python -m http.server 8080` im Projektordner starten, dann
   `node tools/browser-test.mjs tools/browser-test.html` (Vorrat, 12 Prüfungen),
   `tools/scan-test.html` (Scan, 26, braucht Internet) und `tools/backup-test.html` (Sicherung, 28).
