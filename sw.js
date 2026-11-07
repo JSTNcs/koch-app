@@ -1,6 +1,6 @@
 // Service Worker: legt alle App-Dateien im Handy-Speicher ab, damit die App offline läuft.
 // WICHTIG: Bei jeder Änderung an App-Dateien VERSION hochzählen, sonst sieht das Handy die Änderung nicht.
-const VERSION = 'v9';
+const VERSION = 'v10';
 const CACHE = 'koch-app-' + VERSION;
 
 const ASSETS = [
@@ -31,6 +31,8 @@ const ASSETS = [
   'js/tagesziel.js',
   'js/tagebuch.js',
   'js/profil.js',
+  'js/naehrwerte.js',
+  'js/naehrwerte-laden.js',
   'js/screens/leer.js',
   'js/screens/vorrat.js',
   'js/screens/einstellungen.js',
@@ -45,6 +47,7 @@ const ASSETS = [
   'lib/barcode-detector/zxing-exported.js',
   'lib/zxing-wasm/zxing_reader.wasm',
   'daten/startpaket.json',
+  'daten/naehrwerte.json',
   'icons/apple-touch-icon.png',
   'icons/icon-192.png',
   'icons/icon-512.png',

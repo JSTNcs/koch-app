@@ -1,6 +1,8 @@
 import { h } from '../dom.js';
 import { alle, speichere, loesche, datenSchuetzen, schreibeAlles } from '../db.js';
 import { esseRestPortion, restAlterText } from '../kochen.js';
+import { neueMahlzeit } from '../tagebuch.js';
+import { mahlzeitAusPortionen } from '../naehrwerte.js';
 import { ladeHinweis } from '../sicherung.js';
 import { schlageZutatVor, zutatVonEintrag, findeZutat } from '../zutaten.js';
 import { zutatenDatalist, ZUTATEN_LISTE_ID } from '../zutaten-ui.js';
@@ -35,7 +37,7 @@ export async function render(container) {
     zeigeListe();
   }
 
-  function zeigeListe(fehler = '') {
+  function zeigeListe(fehler = '', meldung = null) {
     const kopf = h(
       'div',
       { class: 'zeile' },
@@ -56,7 +58,15 @@ export async function render(container) {
         )
       : null;
     const resteBlock = reste.length ? [h('h2', {}, '🍲 Reste'), h('ul', { class: 'liste' }, reste.map(restKarte)), h('h2', {}, 'Vorrat')] : null;
-    const teile = [kopf, erinnerung, fehler ? h('p', { class: 'hinweis fehler' }, fehler) : null, resteBlock, inhalt].flat().filter(Boolean);
+    const meldungBlock = meldung
+      ? h(
+          'div',
+          { class: 'hinweis' },
+          h('p', { style: 'margin:0 0 10px' }, meldung.text),
+          h('button', { class: 'zweit voll', onclick: meldung.rueckgaengig }, '↩ Rückgängig')
+        )
+      : null;
+    const teile = [kopf, erinnerung, meldungBlock, fehler ? h('p', { class: 'hinweis fehler' }, fehler) : null, resteBlock, inhalt].flat().filter(Boolean);
     container.replaceChildren(...teile);
   }
 
@@ -76,11 +86,22 @@ export async function render(container) {
     );
   }
 
+  // Eine Portion Rest gegessen: weniger Rest, und (wenn die Nährwerte bekannt sind) automatisch ein Tagebucheintrag, mit Rückgängig
   async function esseRest(r) {
     const x = esseRestPortion(r);
-    await schreibeAlles(x.loeschen ? { reste: { loesche: [x.loeschen] } } : { reste: { put: [x.rest] } });
+    const mahlzeit = r.naehrwerte
+      ? neueMahlzeit(mahlzeitAusPortionen({ name: r.name, rezeptId: r.rezeptId, proPortion: r.naehrwerte, anzahl: 1, quelle: 'rest' }))
+      : null;
+    await schreibeAlles({ ...(x.loeschen ? { reste: { loesche: [x.loeschen] } } : { reste: { put: [x.rest] } }), ...(mahlzeit ? { tagebuch: { put: [mahlzeit] } } : {}) });
     await laden();
-    zeigeListe();
+    zeigeListe('', {
+      text: mahlzeit ? `✔ 1 Portion ${r.name} im Tagebuch eingetragen (ca. ${mahlzeit.kcal} kcal).` : `1 Portion ${r.name} gegessen. Es gibt keinen Tagebucheintrag, weil die Nährwerte unbekannt sind.`,
+      rueckgaengig: async () => {
+        await schreibeAlles({ reste: { put: [r] }, ...(mahlzeit ? { tagebuch: { loesche: [mahlzeit.id] } } : {}) });
+        await laden();
+        zeigeListe();
+      },
+    });
   }
 
   async function entferneRest(r) {

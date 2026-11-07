@@ -7,6 +7,9 @@ import { planeAbzug, wendeAn, berechneRest, neuerRest, neuesProtokoll, macheRuec
 import { ladeKochstand, speichereKochstand, loescheKochstand } from '../kochstand.js';
 import { haltWach } from '../wachhalten.js';
 import { formatMenge, parseZahl } from '../pantry.js';
+import { ladeNaehrwerteTabelle } from '../naehrwerte-laden.js';
+import { rezeptNaehrwerte, mahlzeitAusPortionen } from '../naehrwerte.js';
+import { neueMahlzeit } from '../tagebuch.js';
 
 export async function render(container) {
   let rezepte = [];
@@ -15,6 +18,7 @@ export async function render(container) {
   let index = new Map();
   let ks = null; // laufender Kochvorgang (oder null)
   let wach = null;
+  let tabelle = null;
 
   const wachAn = () => (wach = wach || haltWach());
   const wachAus = () => {
@@ -27,9 +31,11 @@ export async function render(container) {
     [rezepte, vorrat, produkte] = await Promise.all([alle('rezepte'), alle('vorrat'), alle('produkte')]);
     index = baueIndex(vorrat, produkte);
     ks = await ladeKochstand();
+    tabelle = await ladeNaehrwerteTabelle();
   }
 
   const rezeptVon = (id) => rezepte.find((r) => r.id === id);
+  const naehrwerteVon = (rezept) => (tabelle ? rezeptNaehrwerte(rezept, { tabelle, produkte, vorrat }) : null);
   const sichere = () => speichereKochstand(ks);
   const zeigeFehler = (e) =>
     ersetze(container, h('p', { class: 'hinweis fehler' }, `Das hat nicht geklappt: ${e.message}`), h('button', { class: 'zweit voll', onclick: () => zeige() }, 'Zurück'));
@@ -231,6 +237,33 @@ export async function render(container) {
       await sichere();
       zeigeFertig(rezept);
     };
+    // Gegessene Portionen ins Tagebuch (Nährwerte sind eine Näherung, immer mit "ca.")
+    const nw = naehrwerteVon(rezept);
+    const pp = nw?.proPortion ?? null;
+    const tagebuchZeile = !pp
+      ? h('p', { class: 'menge' }, 'Für dieses Rezept lassen sich keine Nährwerte berechnen, deshalb gibt es keinen Tagebucheintrag.')
+      : gegessen > 0
+        ? h(
+            'div',
+            {},
+            h(
+              'label',
+              { class: 'kasten', style: 'margin-top:12px' },
+              h('input', {
+                type: 'checkbox',
+                checked: ks.insTagebuch !== false,
+                'aria-label': 'Gegessene Portionen ins Tagebuch eintragen',
+                onchange: async (ev) => {
+                  ks.insTagebuch = ev.target.checked;
+                  await sichere();
+                },
+              }),
+              ` Gegessene Portionen ins Tagebuch eintragen (ca. ${Math.round(pp.kcal * gegessen)} kcal)`
+            ),
+            nw.fehlend.length ? h('p', { class: 'menge' }, `Nicht eingerechnet: ${nw.fehlend.join(', ')}.`) : null
+          )
+        : null;
+
     ersetze(
       container,
       h('h2', {}, '✔ Fertig gekocht'),
@@ -240,6 +273,7 @@ export async function render(container) {
       h('p', {}, 'Wie viele davon hast du gegessen?'),
       stepper(gegessen, 0, gesamt, portionenText(gegessen), (neu) => aendere('gegessen', neu)),
       h('p', { class: 'hinweis' }, restText),
+      tagebuchZeile,
       h(
         'button',
         {
@@ -358,7 +392,13 @@ export async function render(container) {
   async function abschliessen(rezept, plan) {
     const restPortionen = berechneRest(ks.gesamt, ks.gegessen);
     const wirkung = wendeAn(plan, { gewuerzLeer: ks.gewuerzLeer });
-    const rest = restPortionen > 0 ? neuerRest({ rezeptId: rezept.id, name: rezept.name, portionen: restPortionen }) : null;
+    const pp = naehrwerteVon(rezept)?.proPortion ?? null;
+    const rest = restPortionen > 0 ? neuerRest({ rezeptId: rezept.id, name: rezept.name, portionen: restPortionen, naehrwerte: pp }) : null;
+    // Gegessene Portionen ins Tagebuch (wenn angehakt und berechenbar)
+    const mahlzeit =
+      pp && ks.gegessen > 0 && ks.insTagebuch !== false
+        ? neueMahlzeit(mahlzeitAusPortionen({ name: rezept.name, rezeptId: rezept.id, proPortion: pp, anzahl: ks.gegessen, quelle: 'rezept' }))
+        : null;
 
     const zusammenfassung = [];
     for (const z of plan.zeilen) {
@@ -370,12 +410,14 @@ export async function render(container) {
       const z = plan.zeilen.find((x) => x.index === nummer);
       if (z) zusammenfassung.push(`${z.zutat}: jetzt leer`);
     }
-    const protokoll = neuesProtokoll({ rezept, portionen: ks.portionen, gesamt: ks.gesamt, gegessen: ks.gegessen, rest, wirkung, zusammenfassung });
+    if (mahlzeit) zusammenfassung.push(`Tagebuch: ${mahlzeit.menge} (ca. ${mahlzeit.kcal} kcal)`);
+    const protokoll = neuesProtokoll({ rezept, portionen: ks.portionen, gesamt: ks.gesamt, gegessen: ks.gegessen, rest, tagebuchId: mahlzeit?.id ?? null, wirkung, zusammenfassung });
 
     await schreibeAlles({
       vorrat: { put: wirkung.vorratPut, loesche: wirkung.vorratLoesche },
       reste: { put: rest ? [rest] : [] },
       gekocht: { put: [protokoll] },
+      tagebuch: { put: mahlzeit ? [mahlzeit] : [] },
       einstellungen: { loesche: ['kochen'] },
     });
     ks = null;
@@ -404,6 +446,7 @@ export async function render(container) {
       vorrat: { put: r.vorratPut },
       reste: { loesche: r.restLoeschen ? [r.restLoeschen] : [] },
       gekocht: { loesche: [r.protokollLoeschen] },
+      tagebuch: { loesche: r.tagebuchLoeschen ? [r.tagebuchLoeschen] : [] },
     });
     await laden();
     zeigeAuswahl({ typ: '', text: '↩ Rückgängig gemacht: Vorrat und Reste sind wieder wie vorher.' });

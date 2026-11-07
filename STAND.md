@@ -1,7 +1,8 @@
 # Stand
 
-**Phase 1 bis 4 und Phase 5, Teil 1 (Tagesziel und Tagebuch, Version v9) sind abgeschlossen und am iPhone getestet.
-Phase 5 ist in zwei Teile aufgeteilt (so entschieden): Als Nächstes kommt Teil 2 (siehe unten), mit eigenem Test am iPhone.**
+**Phase 1 bis 4 und Phase 5, Teil 1 (Tagesziel und Tagebuch) sind abgeschlossen und am iPhone getestet. Phase 5, Teil 2 (Nährwerte für Rezepte,
+Kochen und Reste ins Tagebuch) ist gebaut und online (Version v10), der Test am echten iPhone steht noch aus.** Danach: Phase 6 (Feinschliff).
+Vorher Plan zeigen und OK abwarten.
 
 ## Wo läuft was
 - App im Netz: https://jstncs.github.io/koch-app/ (GitHub Pages, Zweig `main`, Ordner `/`)
@@ -46,6 +47,20 @@ Phase 5 ist in zwei Teile aufgeteilt (so entschieden): Als Nächstes kommt Teil 
   (Scan-Ablauf mit `beiProdukt`, Nährwerte von Open Food Facts, Vorrat-Haken wenn das Produkt im Vorrat liegt), „✏️ Frei eintippen" (Essen außer Haus)
   und „Zuletzt gegessen" (Vorlage). Einträge ändern und löschen. Hat ein bekanntes Produkt noch keine Nährwerte, merkt es sich die eingetragenen.
   Fehlende Nährwerte zählen als 0 und der Eintrag bekommt „ca.".
+- **Nährwerte (Phase 5, Teil 2):**
+  - Eingebaute Tabelle `daten/naehrwerte.json` (USDA FoodData Central, gemeinfrei, CC0) für die 76 Zutaten, die sich messen lassen, pro 100 g roh/trocken,
+    dazu Stückgewicht (Richtwert, z. B. Zwiebel 90 g, Ei 50 g) und Dichte bei ml. Gebaut mit `tools/baue-naehrwerte.mjs` aus den USDA-Dateien
+    (Download-Adresse und Zuordnung stehen im Skript, das Skript prüft jede Zuordnung gegen den USDA-Namen).
+  - Rezeptansicht zeigt „ca. 471 kcal pro Portion · Eiweiß · Kohlenhydrate · Fett" (unabhängig von den eingestellten Portionen). Eigene Produktdaten (Scan) haben
+    Vorrang vor der Tabelle (bevorzugt ein Produkt im Vorrat). „Nach Bedarf"-Zutaten mit Kalorien zählen mit fester Richtmenge pro Portion (Öl und Olivenöl
+    5 g, Mayonnaise 10 g, steht als „Geschätzt"); Gewürze und Brühe 0. Freiwillige Zutaten zählen nicht. Nicht berechenbare Zutaten stehen unter „Nicht eingerechnet".
+  - Kochen: Auf der Seite „Fertig gekocht" ist „Gegessene Portionen ins Tagebuch eintragen (ca. X kcal)" vorangehakt (abwählbar). „↩ Rückgängig" nimmt den
+    Tagebucheintrag mit zurück (`tagebuchId` im Kochprotokoll). Der Rest merkt sich die Nährwerte pro Portion.
+  - Reste: „1 Portion gegessen" trägt automatisch einen Tagebucheintrag ein (Quelle „rest", „ca."), mit Hinweis und „↩ Rückgängig". Reste ohne Nährwerte (ältere
+    Version): nur die Portion wird abgezogen, mit ehrlichem Hinweis.
+  - Tagebuch aus dem Vorrat und per Scan: Hat das Produkt keine eigenen Nährwerte, schlägt die Tabelle sie über die Zutat vor (pro 100 g/ml bzw. pro Stück, mit
+    Hinweis). Werte unverändert übernommen: Eintrag als „ca.", das Produkt bekommt keine eigenen Daten. Eigene Zahlen werden beim Produkt gemerkt.
+  - Unter Mehr steht die Quelle der Tabelle.
 - **Rezepte verwalten** (Mehr > „📖 Rezepte verwalten"): eintippen und ändern (Zutatenvorschläge, Einheit passend zur Zutat), löschen,
   **Startpaket** (28 Alltagsrezepte für 2 Portionen, gemischt mit Fleisch und Fisch, eigene Texte, `daten/startpaket.json`),
   **Rezeptdatei** einlesen (Rückfrage: was ist neu, was wird ersetzt; gleiche Kennung ersetzt).
@@ -61,22 +76,22 @@ Phase 5 ist in zwei Teile aufgeteilt (so entschieden): Als Nächstes kommt Teil 
 
 ## Wie der Code aufgebaut ist
 - Kein Build-Schritt. `index.html` lädt `js/app.js`; Bildschirme in `js/screens/`, Routen in `js/routes.js`.
-- Reine Logik (gut testbar): `js/tagesziel.js` (Grundumsatz, Vorschlag, Rechenweg), `js/tagebuch.js` (Einträge, Tage, Summen, Abziehen, zuletzt gegessen), `js/pantry.js` (Vorrat), `js/produkt.js` (Produkte, Open-Food-Facts-Antwort, Gruppen), `js/einkauf.js`
+- Reine Logik (gut testbar): `js/tagesziel.js` (Grundumsatz, Vorschlag, Rechenweg), `js/tagebuch.js` (Einträge, Tage, Summen, Abziehen, zuletzt gegessen), `js/naehrwerte.js`, `js/pantry.js` (Vorrat), `js/produkt.js` (Produkte, Open-Food-Facts-Antwort, Gruppen), `js/einkauf.js`
   (Liste, Zuordnung beim Scan), `js/zutaten.js` (Zutatenliste mit 99 Zutaten, Vorschlag), `js/rezepte.js` (Rezepte, Abgleich, Dateiformat),
   `js/kochen.js` (Abzug, Reste, Protokoll, Rückgängig), `js/barcode.js`, `js/backup.js`.
 - Mit Browser verbunden: `js/db.js` (IndexedDB Version 5: `vorrat`, `produkte`, `einkauf`, `rezepte`, `reste`, `gekocht`, `tagebuch`, `einstellungen`; `schreibeAlles` schreibt
-  mehrere Tabellen in einem Rutsch), `js/off.js`, `js/scanner.js`, `js/sicherung.js`, `js/rezeptspeicher.js`, `js/zutaten-ui.js`, `js/kochstand.js` (laufender Kochvorgang), `js/wachhalten.js`, `js/profil.js` (Körperdaten).
+  mehrere Tabellen in einem Rutsch), `js/off.js`, `js/scanner.js`, `js/sicherung.js`, `js/rezeptspeicher.js`, `js/zutaten-ui.js`, `js/kochstand.js` (laufender Kochvorgang), `js/wachhalten.js`, `js/profil.js` (Körperdaten), `js/naehrwerte.js` (Rezept-Nährwerte, Vorschläge) und `js/naehrwerte-laden.js` (Tabelle laden).
 - Scan-Ablauf `js/screens/scan.js` hat drei Betriebsarten: `vorrat`, `liste`, `einkaufen`.
 - PC-Werkzeuge in `tools/`: `rezeptimport.mjs`, `rezept-aus-link.mjs`, `baue-startpaket.mjs` (Quelle des Startpakets: danach
-  `node tools/baue-startpaket.mjs` ausführen), `make-icons.mjs`, Browser-Tests.
+  `node tools/baue-startpaket.mjs` ausführen), `baue-naehrwerte.mjs` (Quelle der Nährwert-Tabelle, braucht die entpackten USDA-Dateien), `make-icons.mjs`, Browser-Tests.
 - Bibliotheken lokal in `lib/` (MIT und Apache-2.0, siehe `lib/README.md`).
 
 ## Tests
-- `npm test`: 253 Logik-Tests im Ordner `tests/` (Node, keine Installation nötig).
+- `npm test`: 277 Logik-Tests im Ordner `tests/` (Node, keine Installation nötig).
 - Browser-Tests im Handy-Format (390 px): `python -m http.server 8080` im Projektordner starten, dann
   `node tools/browser-test.mjs tools/<seite>.html [bild.png]` mit `browser-test.html` (Vorrat, 12 Prüfungen), `scan-test.html` (Scan, 26,
   braucht Internet), `backup-test.html` (Sicherung, 28), `einkauf-test.html` (Einkaufsliste, 60), `rezepte-test.html` (Rezepte, 61, inkl.
-  Umstellung der Datenbank von Version 2 auf 3), `kochen-test.html` (Kochen, 57, inkl. Umstellung von Version 3 auf 4), `tagebuch-test.html` (Tagesziel und Tagebuch, 63, inkl. Umstellung von Version 4 auf 5). Das Skript startet Edge unsichtbar und beendet ihn selbst. Danach den Testserver beenden.
+  Umstellung der Datenbank von Version 2 auf 3), `kochen-test.html` (Kochen, 57, inkl. Umstellung von Version 3 auf 4), `tagebuch-test.html` (Tagesziel und Tagebuch, 63, inkl. Umstellung von Version 4 auf 5), `naehrwerte-test.html` (Nährwerte, Kochen und Reste ins Tagebuch, 30). Das Skript startet Edge unsichtbar und beendet ihn selbst. Danach den Testserver beenden.
 - Die Browser-Tests greifen Formularfelder nach Position an: Wird ein Feld in einem Formular eingefügt, die Positionen anpassen.
 
 ## So veröffentlichst du eine Änderung
@@ -98,23 +113,18 @@ Phase 5 ist in zwei Teile aufgeteilt (so entschieden): Als Nächstes kommt Teil 
   Bereich oben im Vorrat. Keine Timer in den Schritten (Idee für später).
 - Zutaten im Rezept in EL/TL/Prise gibt es nicht: Gewürze „nach Bedarf" (Menge als Hinweis), gemessene Zutaten rechnet der Import ungefähr um.
 
+- Phase 5, Teil 2 wie entschieden umgesetzt (USDA-Tabelle plus eigene Produktdaten, automatischer Tagebucheintrag mit Haken und Rückgängig). Ein Plausibilitätstest rechnet
+  alle 28 Startrezepte durch (alle vollständig berechenbar, 210 bis ca. 1000 kcal pro Portion) und fand dabei eine überdimensionierte Lasagne (jetzt für 2 Portionen).
 - Phase 5 (mit dem Nutzer entschieden): Aufteilung in Teil 1 (Tagesziel, Tagebuch mit Vorrat, Scan, frei, zuletzt gegessen) und Teil 2; Nährwerte für Rezepte aus einer
   eingebauten USDA-Tabelle plus eigenen Produktdaten (eigene haben Vorrang); gekochte Portionen kommen automatisch ins Tagebuch (vorangehakt, mit Hinweis und
   Rückgängig); Essen aus dem Vorrat zieht ab (mit Haken zum Abwählen).
 
-## Phase 5, Teil 2 (nächster Schritt, noch nicht gebaut; Details vor dem Bauen mit dem Nutzer abstimmen)
-- **Nährwert-Tabelle** für die 99 Zutaten aus `js/zutaten.js`: Quelle USDA FoodData Central, **Lizenz geprüft am 07.11.2026: gemeinfrei, CC0 1.0** (laut USDA
-  „public domain, not copyrighted"; Zitat: U.S. Department of Agriculture, Agricultural Research Service. FoodData Central, 2019. fdc.nal.usda.gov). Dateien frei
-  abrufbar, z. B. `https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip` (6 MB) und `..._foundation_food_csv_2025-12-18.zip`.
-  Plan: Skript `tools/baue-naehrwerte.mjs` ordnet jede Zutat einem USDA-Eintrag zu (Zuordnung mit ID im Skript dokumentieren) und schreibt `daten/naehrwerte.json`
-  (pro 100 g: kcal, Eiweiß, Kohlenhydrate, Fett; dazu Gewicht pro Stück und Dichte bei ml). Lizenz dann in CLAUDE.md bei „Lose Zutaten" eintragen.
-- **Rezept-Nährwerte pro Portion** (Näherung, „ca."): Summe der Zutaten (Produktdaten des Nutzers haben Vorrang vor der Tabelle). Für „nach Bedarf"-Öl feste Richtmenge
-  (ca. 5 g pro Portion), sonst fehlt es in der Rechnung.
-- **Anbindung:** Am Ende des Kochens vorangehakter Punkt „Gegessene Portionen ins Tagebuch" (nutzt das Kochprotokoll), bei „Reste: 1 Portion gegessen" automatischer Eintrag
-  mit Hinweis und Rückgängig. Außerdem Stück-Gewichte für Vorrats-Snacks (Eier, Bananen), damit die Nährwerte vorausgefüllt sind.
-
 ## Offen / Bekanntes
-- Nichts offen aus Phase 1 bis 5 Teil 1.
+- Phase 5, Teil 2: Test am iPhone (Rezeptansicht mit „ca. … kcal pro Portion", Kochen mit Tagebuch-Haken und Rückgängig, Rest essen mit Rückgängig, Tabellen-Vorschläge
+  im Tagebuch).
+- Nährwerte sind Näherungen: USDA-Werte sind amerikanische Durchschnittswerte, Marken weichen ab (z. B. Quark 20 % ist durch Hüttenkäse 2 % angenähert, Sahne durch
+  „light whipping", Hackfleisch durch 80/20), Garverluste und Öl in der Pfanne sind nicht erfasst. Stückgewichte sind Richtwerte.
+- Hinweis: Ändert man ein Startrezept in `tools/baue-startpaket.mjs`, danach `node tools/baue-startpaket.mjs` ausführen (der Plausibilitätstest rechnet die Rezepte durch).
 - Echter Link-Import noch nicht an einer echten Seite geprüft; manche Seiten blockieren Programme (dann Text oder Foto an Claude Code).
 - Einheiten werden nicht umgerechnet (Zwiebel in Stück gegen kg im Vorrat: „unklar"). Möglich später: Gewichte pro Stück je Zutat.
 - Design bewusst schlicht, kommt in Phase 6. Bei vielen Rezepten ist die Gruppe „1–2 fehlen" lang; Sortierung nach ablaufenden Zutaten kommt in Phase 6.

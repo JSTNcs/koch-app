@@ -24,6 +24,9 @@ Der Nutzer hat keine Programmiererfahrung: Antworten auf Deutsch, einfach erklä
   lokal in `lib/`, Details und Lizenztexte in `lib/README.md`. Kein CDN.
 - **Produktdaten:** Open Food Facts (Name, Packungsgröße, Nährwerte). Fehlt ein Produkt, trägt der Nutzer es von Hand ein und die App merkt es sich.
 - **Lose Zutaten** (Zwiebel, Hähnchenbrust): eingebaute Tabelle mit Standard-Nährwerten aus einer frei nutzbaren Quelle (z. B. USDA FoodData Central; Lizenz vorher prüfen und hier eintragen).
+  Entschieden und eingebaut: **USDA FoodData Central, SR Legacy (April 2018)**, Lizenz **gemeinfrei, CC0 1.0 Universal** (geprüft am 07.11.2026; die USDA bittet nur um
+  das Zitat: U.S. Department of Agriculture, Agricultural Research Service. FoodData Central, 2019. fdc.nal.usda.gov). Tabelle: `daten/naehrwerte.json`, gebaut mit
+  `tools/baue-naehrwerte.mjs` (Zuordnung Zutat -> USDA-Eintrag steht dort). Werte pro 100 g roh/trocken; Stückgewichte und Richtmengen sind Richtwerte.
 - **Sicherung:** Export und Import als Datei per Knopfdruck. Hinweis in der App, wenn die letzte Sicherung älter als 7 Tage ist.
 
 ## Datenmodell (Grundgerüst)
@@ -38,7 +41,7 @@ Der Nutzer hat keine Programmiererfahrung: Antworten auf Deutsch, einfach erklä
   So findet "Spaghetti" im Rezept jede Marke im Vorrat. Gewürze, Öl, Salz: nur da/leer, ohne Eintrag im Vorrat gelten sie als vorhanden.
 - **Mahlzeit** (Tagebucheintrag, Tabelle `tagebuch`): Tag, Zeit, Mahlzeit (Frühstück, Mittag, Abend, Snack), Name, Menge, Nährwerte für den ganzen
   Eintrag (kcal, Eiweiß, Kohlenhydrate, Fett), `ca` = Näherung, Quelle (frei, produkt, vorrat, rezept, rest)
-- **Rest:** Rezept, Portionen übrig, gekocht am (Tabelle `reste`, im Vorrat-Tab als Bereich "Reste")
+- **Rest:** Rezept, Portionen übrig, gekocht am, Nährwerte pro Portion (Tabelle `reste`, im Vorrat-Tab als Bereich "Reste")
 - **Kochprotokoll:** Datum, Rezept, Portionen gesamt/gegessen, Rest, Vorratseinträge vor dem Abzug (Tabelle `gekocht`, für "Rückgängig";
   Phase 5 macht aus den gegessenen Portionen Tagebuch-Einträge)
 - **Einstellungen:** Körperdaten für das Tagesziel, Tagesziel (Schlüssel `profil`), letzte Sicherung. Körperdaten stehen auch in der Sicherungsdatei.

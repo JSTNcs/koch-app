@@ -19,12 +19,15 @@ import {
 import { ladeProfil } from '../profil.js';
 import { formatMenge, parseZahl } from '../pantry.js';
 import { norm } from '../zutaten.js';
+import { ladeNaehrwerteTabelle } from '../naehrwerte-laden.js';
+import { proFuerEintrag, proFuerProdukt } from '../naehrwerte.js';
 
 export async function render(container) {
   let eintraege = [];
   let produkte = [];
   let vorrat = [];
   let profil = null;
+  let tabelle = null;
   let tag = tagVon(new Date());
 
   const heute = () => tagVon(new Date());
@@ -36,6 +39,7 @@ export async function render(container) {
   async function laden() {
     [eintraege, produkte, vorrat] = await Promise.all([alle('tagebuch'), alle('produkte'), alle('vorrat')]);
     profil = await ladeProfil();
+    tabelle = await ladeNaehrwerteTabelle();
   }
 
   const meldungBox = (m) => (m ? h('p', { class: `hinweis ${m.typ || ''}` }, m.text) : null);
@@ -266,19 +270,23 @@ export async function render(container) {
 
   function zeigeVorratProdukt(e) {
     const produkt = e.barcode ? produkte.find((p) => p.barcode === e.barcode) : null;
+    // Eigene Produktdaten haben Vorrang, sonst schlägt die Tabelle die Nährwerte der Zutat vor (ca.)
+    const eigenePro = e.einheit !== 'stk' ? produkt?.naehrwerte ?? null : null;
+    const tabellenPro = !eigenePro && tabelle ? proFuerEintrag(tabelle, e, produkte) : null;
     zeigeProForm({
       name: e.name,
       nameFest: true,
       einheit: e.einheit,
       einheitWahl: false,
-      pro: e.einheit !== 'stk' ? produkt?.naehrwerte ?? null : null,
+      pro: eigenePro ?? tabellenPro,
+      tabelleCa: Boolean(tabellenPro),
       packung: produkt && produkt.einheit === e.einheit ? produkt.packung : null,
       mengeStart: e.einheit === 'stk' ? 1 : 100,
       quelle: 'vorrat',
       barcode: e.barcode,
       vorratEintrag: e,
       produkt,
-      hinweis: `Im Vorrat: ${formatMenge(e.menge, e.einheit)}.`,
+      hinweis: `Im Vorrat: ${formatMenge(e.menge, e.einheit)}.${tabellenPro ? ' Die Nährwerte stammen aus der Tabelle (ca.), ändere sie, wenn dein Produkt anders ist.' : ''}`,
     });
   }
 
@@ -300,19 +308,22 @@ export async function render(container) {
               .sort((a, b) => (a.ablauf ? 0 : 1) - (b.ablauf ? 0 : 1) || (a.ablauf || '').localeCompare(b.ablauf || '') || a.menge - b.menge)[0] ?? null
           : null;
         const bekannt = produkte.find((x) => x.barcode === p.barcode) ?? null;
+        const hatEigene = p.naehrwerte && ['kcal', 'eiweiss', 'kohlenhydrate', 'fett'].every((f) => typeof p.naehrwerte[f] === 'number');
+        const tabellenPro = !hatEigene && tabelle ? proFuerProdukt(tabelle, p, einheit) : null;
         zeigeProForm({
           name: p.name,
           nameFest: false,
           einheit,
           einheitWahl: true,
-          pro: p.naehrwerte ?? null,
+          pro: hatEigene ? p.naehrwerte : tabellenPro ?? p.naehrwerte ?? null,
+          tabelleCa: Boolean(tabellenPro),
           packung: p.packung && p.einheit === einheit ? p.packung : null,
           mengeStart: 100,
           quelle: 'produkt',
           barcode: p.barcode,
           vorratEintrag: eintrag,
           produkt: bekannt,
-          hinweis: hinweis?.text ?? '',
+          hinweis: [hinweis?.text, tabellenPro ? 'Die Nährwerte stammen aus der Tabelle (ca.).' : null].filter(Boolean).join(' '),
         });
       },
     });
@@ -356,6 +367,8 @@ export async function render(container) {
         const pro = { kcal: leerOderZahl(kcal), eiweiss: leerOderZahl(eiweiss), kohlenhydrate: leerOderZahl(kohlenhydrate), fett: leerOderZahl(fett) };
         if (pro.kcal === null || Number.isNaN(pro.kcal)) throw new Error(`Bitte die Kalorien ${einheit() === 'stk' ? 'pro Stück' : `pro 100 ${einheit()}`} eintragen.`);
         if ([pro.eiweiss, pro.kohlenhydrate, pro.fett].some((w) => w !== null && Number.isNaN(w))) throw new Error('Die Nährwerte müssen Zahlen sein.');
+        // Hat der Nutzer die vorgeschlagenen Tabellenwerte geändert, sind es seine eigenen Zahlen
+        const geaendert = !opt.tabelleCa || ['kcal', 'eiweiss', 'kohlenhydrate', 'fett'].some((f) => pro[f] !== (opt.pro?.[f] ?? null));
         const wert = parseZahl(menge.value);
         const nw = naehrwerteFuerMenge(pro, wert, einheit());
         const m = neueMahlzeit({
@@ -365,7 +378,7 @@ export async function render(container) {
           kohlenhydrate: nw.kohlenhydrate,
           fett: nw.fett,
           menge: formatMenge(wert, einheit()),
-          ca: nw.unvollstaendig,
+          ca: nw.unvollstaendig || (opt.tabelleCa === true && !geaendert),
           quelle: opt.quelle,
           barcode: opt.barcode,
           tag,
@@ -379,7 +392,7 @@ export async function render(container) {
           aenderung.vorrat = r.loeschen ? { loesche: [r.loeschen] } : { put: [r.put] };
         }
         // Hat das bekannte Produkt noch keine Nährwerte, merkt es sich die eingetragenen
-        if (opt.produkt && !opt.produkt.naehrwerte && einheit() !== 'stk' && Object.values(pro).every((w) => w !== null)) {
+        if (opt.produkt && !opt.produkt.naehrwerte && einheit() !== 'stk' && geaendert && Object.values(pro).every((w) => w !== null)) {
           aenderung.produkte = { put: [{ ...opt.produkt, naehrwerte: pro }] };
         }
         await schreibeAlles(aenderung);

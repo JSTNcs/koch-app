@@ -168,7 +168,8 @@ async function lauf() {
   await eintragen('🥫 Aus dem Vorrat');
   tippe(doc().querySelector('input[aria-label="Im Vorrat suchen"]'), 'eier'); await warte(250);
   doc().querySelector('.eintrag-knopf').click(); await warte(450);
-  ok(text().includes('Nährwerte pro Stück') && feld('Menge').value === '1' && feld('Kalorien pro 100').value === '', 'Eier (Stück): Nährwerte pro Stück, Menge 1, noch leer');
+  ok(text().includes('Nährwerte pro Stück') && feld('Menge').value === '1' && feld('Kalorien pro 100').value === '72' && text().includes('stammen aus der Tabelle'), 'Eier (Stück): Nährwerte pro Stück aus der Tabelle vorgeschlagen (72 kcal), Menge 1');
+  tippe(feld('Kalorien pro 100'), '');
   await klick('Eintragen', 300);
   ok(text().includes('Bitte die Kalorien pro Stück eintragen'), 'Ohne Kalorien wird abgelehnt');
   tippe(feld('Kalorien pro 100'), '78'); tippe(feld('Eiweiß pro 100'), '6,3'); tippe(feld('Menge'), '2');
@@ -176,7 +177,7 @@ async function lauf() {
   doc().querySelector('input[type=checkbox]').click();
   await klick('Eintragen', 600);
   t = await tagebuchDB();
-  ok(t.some((e) => e.name === 'Eier' && e.kcal === 156 && e.ca === true), 'Eier eingetragen (unvollständige Werte als "ca.")');
+  ok(t.some((e) => e.name === 'Eier' && e.kcal === 156 && e.ca === false), 'Eier mit eigenen Zahlen eingetragen (156 kcal, nicht als Näherung markiert)');
   ok((await vorratEintrag('ve')).menge === 6, 'Haken abgewählt: Vorrat unverändert (6 Eier)');
   // Produkt ohne Nährwerte merkt sich die eingetragenen
   await eintragen('🥫 Aus dem Vorrat');

@@ -165,6 +165,7 @@ test('neuerRest: Felder und Prüfung', () => {
     name: 'Chili',
     portionen: 2,
     gekochtAm: '2026-11-10T12:00:00.000Z',
+    naehrwerte: null,
   });
   assert.throws(() => neuerRest({ rezeptId: 'r1', name: '', portionen: 2, jetzt: JETZT }), /Name/);
   assert.throws(() => neuerRest({ rezeptId: 'r1', name: 'X', portionen: 0, jetzt: JETZT }), /Portionen/);
@@ -246,4 +247,34 @@ test('neuerKochstand: Start bei den Zutaten, gegessen standardmäßig 1', () => 
   assert.deepEqual([k.bereit, k.optionalBenutzt, k.mengen, k.gewuerzLeer], [[], [], {}, []]);
   assert.equal(k.gestartet, '2026-11-10T12:00:00.000Z');
   assert.equal(neuerKochstand(sauce(), 1, JETZT).gegessen, 1);
+});
+
+// --- Nährwerte pro Portion beim Rest und Tagebucheintrag im Protokoll ---
+const proPortion = { kcal: 433, eiweiss: 13.5, kohlenhydrate: 78.9, fett: 6.5 };
+test('neuerRest: merkt sich die Nährwerte pro Portion', () => {
+  const r = neuerRest({ rezeptId: 'r1', name: 'Chili', portionen: 2, naehrwerte: proPortion, jetzt: JETZT }, { id: 'x' });
+  assert.deepEqual(r.naehrwerte, proPortion);
+  assert.throws(() => neuerRest({ rezeptId: 'r1', name: 'Chili', portionen: 2, naehrwerte: { kcal: -1, eiweiss: 1, kohlenhydrate: 1, fett: 1 }, jetzt: JETZT }), /Nährwerte/);
+  assert.throws(() => neuerRest({ rezeptId: 'r1', name: 'Chili', portionen: 2, naehrwerte: { kcal: 5 }, jetzt: JETZT }), /Nährwerte/);
+});
+test('normalisiereRest: Nährwerte bleiben erhalten, ältere Reste ohne Nährwerte sind in Ordnung', () => {
+  const r = neuerRest({ rezeptId: 'r1', name: 'Chili', portionen: 2, naehrwerte: proPortion, jetzt: JETZT }, { id: 'x' });
+  assert.deepEqual(normalisiereRest(JSON.parse(JSON.stringify(r))).naehrwerte, proPortion);
+  const alt = JSON.parse(JSON.stringify(r));
+  delete alt.naehrwerte;
+  assert.equal(normalisiereRest(alt).naehrwerte, null);
+  assert.throws(() => normalisiereRest({ ...r, naehrwerte: { kcal: 'viel' } }), /Nährwerte/);
+});
+test('neuesProtokoll: merkt den Tagebucheintrag, "Rückgängig" nimmt ihn mit', () => {
+  const wirkung = wendeAn(planeAbzug(sauce(), 2, ctx([])), {});
+  const p = neuesProtokoll({ rezept: sauce(), portionen: 2, gesamt: 2, gegessen: 1, rest: null, tagebuchId: 'mz1', wirkung, jetzt: JETZT, zusammenfassung: [] }, { id: 'p' });
+  assert.equal(p.tagebuchId, 'mz1');
+  assert.equal(macheRueckgaengig(p).tagebuchLoeschen, 'mz1');
+  assert.equal(normalisiereProtokoll(JSON.parse(JSON.stringify(p))).tagebuchId, 'mz1');
+  const ohne = neuesProtokoll({ rezept: sauce(), portionen: 2, gesamt: 2, gegessen: 1, rest: null, wirkung, jetzt: JETZT, zusammenfassung: [] }, { id: 'p2' });
+  assert.equal(ohne.tagebuchId, null);
+  assert.equal(macheRueckgaengig(ohne).tagebuchLoeschen, null);
+  const alt = JSON.parse(JSON.stringify(ohne));
+  delete alt.tagebuchId;
+  assert.equal(normalisiereProtokoll(alt).tagebuchId, null);
 });

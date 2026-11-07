@@ -101,7 +101,8 @@ export async function render(container) {
       h('button', { class: 'zweit voll', onclick: () => dateiWahl.click() }, '📂 Sicherungsdatei wählen'),
       dateiWahl,
       statusBox,
-      h('p', { class: 'menge', style: 'margin-top:32px' }, `Version ${APP_VERSION}`)
+      h('p', { class: 'menge', style: 'margin-top:32px' }, `Version ${APP_VERSION}`),
+      h('p', { class: 'menge' }, 'Nährwert-Tabelle: USDA FoodData Central (gemeinfrei, CC0). Die Werte sind Näherungen.')
     );
   }
 

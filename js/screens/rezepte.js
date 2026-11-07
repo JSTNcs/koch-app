@@ -5,6 +5,8 @@ import { baueIndex, pruefeRezept, gruppiereVorschlaege, fehlendFuerListe, mengeT
 import { fuegeHinzu } from '../einkauf.js';
 import { formatMenge } from '../pantry.js';
 import { beginneKochen } from '../kochstand.js';
+import { ladeNaehrwerteTabelle } from '../naehrwerte-laden.js';
+import { rezeptNaehrwerte } from '../naehrwerte.js';
 import { holeStartpaketText, planeImportAusText, fuehreImportAus } from '../rezeptspeicher.js';
 
 export async function render(container) {
@@ -12,10 +14,12 @@ export async function render(container) {
   let vorrat = [];
   let produkte = [];
   let index = new Map();
+  let tabelle = null;
 
   async function laden() {
     [rezepte, vorrat, produkte] = await Promise.all([alle('rezepte'), alle('vorrat'), alle('produkte')]);
     index = baueIndex(vorrat, produkte);
+    tabelle = await ladeNaehrwerteTabelle();
   }
 
   const pruefe = (r, portionen) => pruefeRezept(r, { index }, portionen ? { portionen } : {});
@@ -85,6 +89,14 @@ export async function render(container) {
   // ---------- Ein Rezept ----------
   function zeigeRezept(rezept, portionen = rezept.portionen, meldung = null) {
     const p = pruefe(rezept, portionen);
+    // Nährwerte pro Portion (Näherung): unabhängig davon, für wie viele Portionen du gerade kochst
+    const nw = tabelle ? rezeptNaehrwerte(rezept, { tabelle, produkte, vorrat }) : null;
+    const de = (n) => String(n).replace('.', ',');
+    const nwText = nw?.proPortion
+      ? `ca. ${nw.proPortion.kcal} kcal pro Portion · Eiweiß ${de(nw.proPortion.eiweiss)} g · Kohlenhydrate ${de(nw.proPortion.kohlenhydrate)} g · Fett ${de(nw.proPortion.fett)} g` +
+        (nw.geschaetzt.length ? `. Geschätzt: ${nw.geschaetzt.join(', ')} (feste Richtmenge).` : '') +
+        (nw.fehlend.length ? ` Nicht eingerechnet: ${nw.fehlend.join(', ')}.` : '')
+      : null;
 
     const symbol = { da: '✔', teils: '◐', fehlt: '✘', unklar: '❓', angenommen: '○' };
     const hinweis = (z) => {
@@ -148,6 +160,7 @@ export async function render(container) {
       p.kategorie === 'alles'
         ? h('p', { class: 'hinweis' }, '✔ Alles da, du kannst es kochen.')
         : h('p', { class: 'hinweis warnung' }, `Es fehlen ${p.fehlend} ${p.fehlend === 1 ? 'Zutat' : 'Zutaten'}.`),
+      nwText ? h('p', { class: `hinweis ${nw.fehlend.length ? 'warnung' : ''}` }, nwText) : null,
       h('button', { class: 'voll gross', style: 'margin:8px 0', onclick: () => beginneKochen(rezept, portionen).catch(zeigeFehler) }, '🍳 Kochen'),
       h('h2', {}, 'Zutaten'),
       h('ul', { class: 'zutatenliste' }, p.zutaten.map(zeile)),

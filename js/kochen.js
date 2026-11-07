@@ -124,11 +124,22 @@ export function berechneRest(gesamt, gegessen) {
   return gesamt - gegessen;
 }
 
-export function neuerRest({ rezeptId = null, name, portionen, jetzt = new Date() }, { id = crypto.randomUUID() } = {}) {
+// Nährwerte pro Portion (oder null): { kcal, eiweiss, kohlenhydrate, fett }, werden beim Kochen gemerkt,
+// damit "1 Portion gegessen" später ohne Rechnung ins Tagebuch kann.
+function pruefeNaehrwerte(n) {
+  if (n === null || n === undefined) return null;
+  const felder = ['kcal', 'eiweiss', 'kohlenhydrate', 'fett'];
+  if (typeof n !== 'object' || felder.some((f) => typeof n[f] !== 'number' || !Number.isFinite(n[f]) || n[f] < 0)) {
+    throw new Error('Die Nährwerte des Rests sind ungültig.');
+  }
+  return { kcal: n.kcal, eiweiss: n.eiweiss, kohlenhydrate: n.kohlenhydrate, fett: n.fett };
+}
+
+export function neuerRest({ rezeptId = null, name, portionen, naehrwerte = null, jetzt = new Date() }, { id = crypto.randomUUID() } = {}) {
   const n = String(name ?? '').trim();
   if (!n) throw new Error('Bitte einen Namen eintragen.');
   if (!Number.isInteger(portionen) || portionen < 1) throw new Error('Die Portionen müssen eine ganze Zahl über 0 sein.');
-  return { id, rezeptId, name: n, portionen, gekochtAm: jetzt.toISOString() };
+  return { id, rezeptId, name: n, portionen, gekochtAm: jetzt.toISOString(), naehrwerte: pruefeNaehrwerte(naehrwerte) };
 }
 
 // Eine Portion gegessen: { rest } mit einer Portion weniger oder { loeschen: id }, wenn nichts mehr übrig ist.
@@ -143,7 +154,8 @@ export function restAlterText(rest, jetzt = new Date()) {
 
 // ---------- Kochprotokoll und Rückgängig ----------
 
-export function neuesProtokoll({ rezept, portionen, gesamt, gegessen, rest, wirkung, jetzt = new Date(), zusammenfassung = [] }, { id = crypto.randomUUID() } = {}) {
+// tagebuchId: Kennung des Tagebucheintrags, der beim Kochen für die gegessenen Portionen angelegt wurde (oder weggelassen)
+export function neuesProtokoll({ rezept, portionen, gesamt, gegessen, rest, tagebuchId = null, wirkung, jetzt = new Date(), zusammenfassung = [] }, { id = crypto.randomUUID() } = {}) {
   return {
     id,
     rezeptId: rezept.id,
@@ -153,13 +165,14 @@ export function neuesProtokoll({ rezept, portionen, gesamt, gegessen, rest, wirk
     gesamt,
     gegessen,
     restId: rest?.id ?? null,
+    tagebuchId,
     vorher: wirkung.vorher,
     zusammenfassung,
   };
 }
 
 export function macheRueckgaengig(protokoll) {
-  return { vorratPut: protokoll.vorher, restLoeschen: protokoll.restId, protokollLoeschen: protokoll.id };
+  return { vorratPut: protokoll.vorher, restLoeschen: protokoll.restId, tagebuchLoeschen: protokoll.tagebuchId ?? null, protokollLoeschen: protokoll.id };
 }
 
 // ---------- Prüfen beim Einlesen einer Sicherung ----------
@@ -171,7 +184,7 @@ export function normalisiereRest(roh) {
   if (!name) throw new Error('Bitte einen Namen eintragen.');
   if (!Number.isInteger(roh.portionen) || roh.portionen < 1) throw new Error('Die Portionen müssen eine ganze Zahl über 0 sein.');
   if (!gueltigesDatum(roh.gekochtAm)) throw new Error('Ungültiges Datum bei „gekocht am“.');
-  return { id: roh.id, rezeptId: typeof roh.rezeptId === 'string' ? roh.rezeptId : null, name, portionen: roh.portionen, gekochtAm: roh.gekochtAm };
+  return { id: roh.id, rezeptId: typeof roh.rezeptId === 'string' ? roh.rezeptId : null, name, portionen: roh.portionen, gekochtAm: roh.gekochtAm, naehrwerte: pruefeNaehrwerte(roh.naehrwerte) };
 }
 
 export function normalisiereProtokoll(roh) {
@@ -193,6 +206,7 @@ export function normalisiereProtokoll(roh) {
     gesamt: roh.gesamt,
     gegessen: roh.gegessen,
     restId: typeof roh.restId === 'string' ? roh.restId : null,
+    tagebuchId: typeof roh.tagebuchId === 'string' ? roh.tagebuchId : null,
     vorher: roh.vorher.map(normalisiereEintrag),
     zusammenfassung: (Array.isArray(roh.zusammenfassung) ? roh.zusammenfassung : []).filter((z) => typeof z === 'string'),
   };

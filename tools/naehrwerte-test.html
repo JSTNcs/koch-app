@@ -1,0 +1,171 @@
+<!doctype html>
+<!-- Prüft Phase 5 Teil 2: Nährwerte pro Rezept-Portion (Tabelle, eigene Produktdaten, unbekannte Zutaten), Kochen -> Tagebuch
+     (vorangehakt, abwählbar, Rückgängig), Reste essen -> Tagebuch (mit Rückgängig), Vorschläge aus der Tabelle im Tagebuch.
+     Aufruf: node tools/browser-test.mjs tools/naehrwerte-test.html -->
+<meta charset="utf-8">
+<body style="margin:0;background:#888">
+<pre id="out" style="position:fixed;right:0;top:0;width:300px;background:#fff;font-size:11px;margin:0;padding:4px;z-index:99"></pre>
+<iframe id="app" style="width:390px;height:780px;border:0;background:#fff;display:block;margin:10px"></iframe>
+<script type="module">
+import { alle, speichere } from '../js/db.js';
+import { neuesRezept } from '../js/rezepte.js';
+import { neuerEintrag } from '../js/pantry.js';
+import { neuesProdukt } from '../js/produkt.js';
+import { tagVon } from '../js/tagebuch.js';
+
+const out = document.getElementById('out');
+const log = (s) => (out.textContent += s + '\n');
+const ok = (b, t) => log((b ? 'PASS ' : 'FAIL ') + t);
+const warte = (ms) => new Promise((r) => setTimeout(r, ms));
+const frame = document.getElementById('app');
+const doc = () => frame.contentDocument;
+const text = () => doc().body.innerText;
+const knopf = (s) => [...doc().querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(s));
+const klick = async (s, ms = 400) => { const k = knopf(s); if (!k) throw new Error('Knopf fehlt: ' + s + ' | Sichtbar: ' + text().slice(0, 300)); k.click(); await warte(ms); };
+const tippe = (el, w) => { el.value = w; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); };
+const feld = (label) => doc().querySelector(`[aria-label="${label}"]`);
+async function bis(f, ms = 8000) { const t = Date.now(); while (Date.now() - t < ms) { if (f()) return true; await warte(120); } return false; }
+const karte = (name) => [...doc().querySelectorAll('.rezeptkarte')].find((k) => k.querySelector('.titel').textContent === name);
+const tagebuchDB = async () => (await alle('tagebuch')).sort((a, b) => a.zeit.localeCompare(b.zeit));
+
+async function seite(hash) {
+  const geladen = new Promise((r) => (frame.onload = r));
+  if (frame.contentWindow.location.href.includes('index.html')) { frame.contentWindow.location.hash = hash; frame.contentWindow.location.reload(); }
+  else frame.src = '../index.html' + hash;
+  await geladen;
+  await bis(() => doc().querySelector('#screen')?.children.length, 10000);
+  frame.contentWindow.confirm = () => true;
+  await warte(300);
+}
+// Rezept kochen bis zur Seite "Fertig gekocht"
+async function kochBisFertig(name, anzahlSchritte) {
+  await seite('#/kochen');
+  karte(name).click(); await warte(350);
+  await klick('🍳 Los geht', 450);
+  await klick('Weiter: erster Schritt', 450);
+  for (let i = 0; i < anzahlSchritte - 1; i++) await klick('Weiter →', 300);
+  await klick('Fertig gekocht ✔', 450);
+}
+
+async function lauf() {
+  await new Promise((r) => { const q = indexedDB.deleteDatabase('koch-app'); q.onsuccess = q.onerror = q.onblocked = r; });
+
+  // ===== Daten: Startpaket, ein Rezept mit unbekannter Zutat, Vorrat =====
+  const sp = await (await fetch('../daten/startpaket.json')).json();
+  for (const r of sp.rezepte) await speichere('rezepte', neuesRezept(r));
+  await speichere('rezepte', neuesRezept({ id: 'hirse', name: 'Hirse-Pfanne', portionen: 2, zutaten: [{ zutat: 'Hirse', menge: 200, einheit: 'g' }, { zutat: 'Zwiebeln', menge: 1, einheit: 'stk' }], schritte: ['Braten.'] }));
+  await speichere('rezepte', neuesRezept({ id: 'unbekannt', name: 'Nur Unbekanntes', portionen: 2, zutaten: [{ zutat: 'Hirse', menge: 100, einheit: 'g' }], schritte: ['Kochen.'] }));
+  const E = (id, name, menge, einheit, o = {}) => speichere('vorrat', neuerEintrag({ name, art: 'menge', menge, einheit, ...o }, { id }));
+  await E('vz', 'Zwiebeln', 1000, 'g');
+  await speichere('produkte', neuesProdukt({ barcode: '3017620422003', name: 'Haferflocken', art: 'menge', packung: 500, einheit: 'g' }));
+  await E('vh', 'Haferflocken', 500, 'g', { barcode: '3017620422003' });
+
+  // ===== 1. Nährwerte im Rezept =====
+  await seite('#/rezepte');
+  karte('Spaghetti mit Tomatensauce').click(); await warte(450);
+  ok(text().includes('ca. 471 kcal pro Portion · Eiweiß 15,4 g · Kohlenhydrate 87,2 g · Fett 7,2 g'), 'Rezeptansicht: "ca. 471 kcal pro Portion", Eiweiß, Kohlenhydrate, Fett mit Komma');
+  ok(text().includes('Geschätzt: Olivenöl'), 'Olivenöl ("nach Bedarf") ist als geschätzt gekennzeichnet');
+  ok(!text().includes('Nicht eingerechnet'), 'Alle Zutaten sind eingerechnet');
+  const plus = () => [...doc().querySelectorAll('.portionen button')].find((b) => b.textContent === '+');
+  plus().click(); await warte(300); plus().click(); await warte(300);
+  ok(text().includes('4 Portionen') && text().includes('ca. 471 kcal pro Portion'), 'Mehr Portionen ändern die Nährwerte pro Portion nicht');
+  await klick('← Zurück', 300);
+  karte('Hirse-Pfanne').click(); await warte(450);
+  ok(text().includes('Nicht eingerechnet: Hirse') && doc().querySelector('.hinweis.warnung'), 'Unbekannte Zutat (Hirse): "Nicht eingerechnet: Hirse"');
+  ok(text().includes('ca. 18 kcal pro Portion'), 'Hirse-Pfanne: nur die Zwiebel zählt (1 Zwiebel = 90 g = 36 kcal, pro Portion 18)');
+  await klick('← Zurück', 300);
+  karte('Nur Unbekanntes').click(); await warte(450);
+  ok(!text().includes('kcal pro Portion'), 'Ist nichts berechenbar, steht keine Zahl da');
+  await klick('← Zurück', 300);
+
+  // ===== 2. Eigene Produktdaten haben Vorrang =====
+  await speichere('produkte', neuesProdukt({ barcode: '4006381333931', name: 'Barilla Spaghetti', art: 'menge', packung: 500, einheit: 'g', naehrwerte: { kcal: 350, eiweiss: 12, kohlenhydrate: 70, fett: 2 } }));
+  await E('vs', 'Barilla Spaghetti', 500, 'g', { barcode: '4006381333931' });
+  await seite('#/rezepte');
+  karte('Spaghetti mit Tomatensauce').click(); await warte(450);
+  ok(text().includes('ca. 450 kcal pro Portion'), 'Eigenes Produkt (350 kcal pro 100 g) statt Tabelle: 450 statt 471 kcal pro Portion');
+  await klick('← Zurück', 300);
+
+  // ===== 3. Kochen -> Tagebuch (vorangehakt) =====
+  await kochBisFertig('Spaghetti mit Tomatensauce', 4);
+  const kasten = doc().querySelector('input[aria-label="Gegessene Portionen ins Tagebuch eintragen"]');
+  ok(!!kasten && kasten.checked && text().includes('(ca. 450 kcal)'), 'Fertig-Seite: Punkt "Gegessene Portionen ins Tagebuch eintragen (ca. 450 kcal)" ist vorangehakt');
+  const stepperKnopf = (n) => [...doc().querySelectorAll('.portionen button')][n]; // 0/1: insgesamt − +, 2/3: gegessen − +
+  stepperKnopf(3).click(); await warte(300); // gegessen: 2 von 2
+  ok(text().includes('(ca. 900 kcal)') && text().includes('Kein Rest'), 'Zwei Portionen gegessen: ca. 900 kcal, kein Rest');
+  stepperKnopf(2).click(); await warte(300); // wieder 1 gegessen, 1 Rest
+  ok(text().includes('(ca. 450 kcal)') && text().includes('Rest: 1 Portion'), 'Eine Portion gegessen: ca. 450 kcal, Rest 1 Portion');
+  await klick('Weiter: Vorrat anpassen', 450);
+  await klick('✔ Vorrat anpassen', 800);
+  let t = await tagebuchDB();
+  ok(text().includes('Tagebuch: 1 Portion (ca. 450 kcal)'), 'Ergebnis nennt den Tagebucheintrag');
+  const e1 = t.find((e) => e.quelle === 'rezept');
+  ok(e1 && e1.name === 'Spaghetti mit Tomatensauce' && e1.kcal === 450 && e1.ca === true && e1.menge === '1 Portion' && e1.tag === tagVon(new Date()) && e1.rezeptId === 'start-spaghetti-tomatensauce', 'Tagebuch: 450 kcal, "ca.", 1 Portion, heute, Rezept verknüpft');
+  let prot = (await alle('gekocht'))[0];
+  ok(prot.tagebuchId === e1.id, 'Das Kochprotokoll merkt sich den Tagebucheintrag');
+  // Rückgängig nimmt auch den Tagebucheintrag zurück
+  await klick('↩ Rückgängig', 800);
+  ok((await tagebuchDB()).length === 0 && (await alle('reste')).length === 0 && (await alle('gekocht')).length === 0, 'Rückgängig: Tagebucheintrag, Rest und Protokoll sind weg');
+
+  // ===== 4. Kochen mit abgewähltem Haken, Rest merkt sich die Nährwerte =====
+  await kochBisFertig('Spaghetti mit Tomatensauce', 4);
+  doc().querySelector('input[aria-label="Gegessene Portionen ins Tagebuch eintragen"]').click(); await warte(300);
+  await klick('Weiter: Vorrat anpassen', 450);
+  await klick('✔ Vorrat anpassen', 800);
+  ok((await tagebuchDB()).length === 0 && !text().includes('Tagebuch: '), 'Haken abgewählt: kein Tagebucheintrag');
+  const rest = (await alle('reste'))[0];
+  ok(rest && rest.portionen === 1 && rest.naehrwerte?.kcal === 450 && rest.naehrwerte?.eiweiss > 0, 'Der Rest merkt sich die Nährwerte pro Portion (450 kcal)');
+
+  // ===== 5. Rest essen -> Tagebuch =====
+  await seite('#/vorrat');
+  ok(text().includes('🍲 Reste') && text().includes('1 Portion'), 'Vorrat zeigt den Rest');
+  await klick('1 Portion gegessen', 600);
+  t = await tagebuchDB();
+  const e2 = t[0];
+  ok(t.length === 1 && e2.quelle === 'rest' && e2.kcal === 450 && e2.ca === true && (await alle('reste')).length === 0, 'Rest gegessen: Tagebucheintrag (ca. 450 kcal, Quelle Rest), Rest ist weg');
+  ok(text().includes('✔ 1 Portion Spaghetti mit Tomatensauce im Tagebuch eingetragen (ca. 450 kcal)') && !!knopf('↩ Rückgängig'), 'Hinweis mit "↩ Rückgängig"');
+  await klick('↩ Rückgängig', 600);
+  ok((await tagebuchDB()).length === 0 && (await alle('reste')).length === 1 && (await alle('reste'))[0].portionen === 1 && text().includes('🍲 Reste'), 'Rückgängig: Rest ist wieder da, Tagebucheintrag weg');
+  // Rest ohne Nährwerte (z. B. aus einer älteren Version)
+  await speichere('reste', { id: 'alt', rezeptId: null, name: 'Alter Eintopf', portionen: 2, gekochtAm: new Date().toISOString() });
+  await seite('#/vorrat');
+  [...doc().querySelectorAll('.eintrag')].find((x) => x.textContent.includes('Alter Eintopf')).querySelector('button').click(); await warte(600);
+  ok((await tagebuchDB()).length === 0 && text().includes('Es gibt keinen Tagebucheintrag, weil die Nährwerte unbekannt sind'), 'Rest ohne Nährwerte: ehrlicher Hinweis, kein Tagebucheintrag');
+  ok((await alle('reste')).find((x) => x.id === 'alt').portionen === 1, 'Die Portion wurde trotzdem abgezogen');
+
+  // ===== 6. Vorschläge aus der Tabelle im Tagebuch =====
+  await seite('#/tagebuch');
+  await klick('＋ Eintragen', 350);
+  await klick('🥫 Aus dem Vorrat', 400);
+  tippe(doc().querySelector('input[aria-label="Im Vorrat suchen"]'), 'zwie'); await warte(250);
+  doc().querySelector('.eintrag-knopf').click(); await warte(450);
+  ok(feld('Kalorien pro 100').value === '40' && feld('Eiweiß pro 100').value === '1,1' && text().includes('stammen aus der Tabelle'), 'Zwiebeln aus dem Vorrat (ohne eigene Daten): Tabelle schlägt 40 kcal pro 100 g vor');
+  tippe(feld('Menge'), '50');
+  await klick('Eintragen', 600);
+  t = await tagebuchDB();
+  const zw = t.find((e) => e.name === 'Zwiebeln');
+  ok(zw && zw.kcal === 20 && zw.ca === true, 'Unveränderte Tabellenwerte: Eintrag als Näherung ("ca.") gekennzeichnet');
+  // Haferflocken: Tabelle schlägt vor, unverändert -> Produkt bekommt KEINE eigenen Nährwerte
+  await klick('＋ Eintragen', 350);
+  await klick('🥫 Aus dem Vorrat', 400);
+  tippe(doc().querySelector('input[aria-label="Im Vorrat suchen"]'), 'hafer'); await warte(250);
+  doc().querySelector('.eintrag-knopf').click(); await warte(450);
+  ok(feld('Kalorien pro 100').value === '379', 'Haferflocken: 379 kcal pro 100 g aus der Tabelle');
+  await klick('Eintragen', 600);
+  ok((await alle('produkte')).find((p) => p.name === 'Haferflocken').naehrwerte === null, 'Unveränderte Tabellenwerte werden nicht als eigene Produktdaten gespeichert');
+
+  // ===== 7. Tagebuch zeigt die Rezept-Einträge =====
+  await speichere('tagebuch', (await import('../js/tagebuch.js')).neueMahlzeit({ name: 'Chili con Carne', kcal: 706, eiweiss: 40.6, kohlenhydrate: 54.6, fett: 38.2, menge: '1 Portion', ca: true, quelle: 'rezept', rezeptId: 'x' }, { id: 'chili' }));
+  await seite('#/tagebuch');
+  ok(text().includes('Chili con Carne') && text().includes('1 Portion · ca. · E 40,6 · KH 54,6 · F 38,2 g'), 'Tagebuch zeigt "1 Portion · ca." mit Komma');
+
+  // ===== 8. Quelle und Layout =====
+  await seite('#/einstellungen');
+  ok(text().includes('Nährwert-Tabelle: USDA FoodData Central'), 'Unter Mehr steht die Quelle der Nährwert-Tabelle');
+  await seite('#/rezepte');
+  karte('Spaghetti Bolognese').click(); await warte(450);
+  ok(!/null|undefined|NaN|\[object/.test(text()) && doc().documentElement.scrollWidth <= 390, 'Rezeptansicht mit Nährwerten: sauber, kein seitliches Scrollen (' + doc().documentElement.scrollWidth + ')');
+  log('FERTIG');
+}
+lauf().catch((e) => { log('FAIL Fehler: ' + e.message + ' | ' + (e.stack || '').split('\n')[1]); log('FERTIG'); });
+</script>

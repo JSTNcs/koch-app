@@ -318,19 +318,19 @@
         {
           "zutat": "Nudeln",
           "art": "menge",
-          "menge": 250,
+          "menge": 200,
           "einheit": "g"
         },
         {
           "zutat": "Sahne",
           "art": "menge",
-          "menge": 200,
+          "menge": 150,
           "einheit": "ml"
         },
         {
           "zutat": "Käse",
           "art": "menge",
-          "menge": 150,
+          "menge": 100,
           "einheit": "g"
         },
         {
@@ -377,43 +377,43 @@
         {
           "zutat": "Lasagneplatten",
           "art": "menge",
-          "menge": 150,
+          "menge": 120,
           "einheit": "g"
         },
         {
           "zutat": "Hackfleisch",
           "art": "menge",
-          "menge": 300,
+          "menge": 250,
           "einheit": "g"
         },
         {
           "zutat": "Passierte Tomaten",
           "art": "menge",
-          "menge": 400,
+          "menge": 300,
           "einheit": "g"
         },
         {
           "zutat": "Milch",
           "art": "menge",
-          "menge": 400,
+          "menge": 300,
           "einheit": "ml"
         },
         {
           "zutat": "Butter",
           "art": "menge",
-          "menge": 30,
+          "menge": 20,
           "einheit": "g"
         },
         {
           "zutat": "Mehl",
           "art": "menge",
-          "menge": 30,
+          "menge": 20,
           "einheit": "g"
         },
         {
           "zutat": "Käse",
           "art": "menge",
-          "menge": 100,
+          "menge": 80,
           "einheit": "g"
         },
         {
