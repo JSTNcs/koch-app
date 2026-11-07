@@ -1,7 +1,7 @@
 # Stand
 
-**Phase 1 bis 4 sind abgeschlossen und am iPhone getestet. Phase 5 (Tagebuch und Tagesziel) ist in zwei Teile aufgeteilt (so entschieden):
-Teil 1 ist gebaut und online (Version v9), der Test am echten iPhone steht noch aus. Teil 2 (siehe unten) kommt danach, mit eigenem Test.**
+**Phase 1 bis 4 und Phase 5, Teil 1 (Tagesziel und Tagebuch, Version v9) sind abgeschlossen und am iPhone getestet.
+Phase 5 ist in zwei Teile aufgeteilt (so entschieden): Als Nächstes kommt Teil 2 (siehe unten), mit eigenem Test am iPhone.**
 
 ## Wo läuft was
 - App im Netz: https://jstncs.github.io/koch-app/ (GitHub Pages, Zweig `main`, Ordner `/`)
@@ -102,7 +102,7 @@ Teil 1 ist gebaut und online (Version v9), der Test am echten iPhone steht noch 
   eingebauten USDA-Tabelle plus eigenen Produktdaten (eigene haben Vorrang); gekochte Portionen kommen automatisch ins Tagebuch (vorangehakt, mit Hinweis und
   Rückgängig); Essen aus dem Vorrat zieht ab (mit Haken zum Abwählen).
 
-## Phase 5, Teil 2 (nächster Schritt, noch nicht gebaut)
+## Phase 5, Teil 2 (nächster Schritt, noch nicht gebaut; Details vor dem Bauen mit dem Nutzer abstimmen)
 - **Nährwert-Tabelle** für die 99 Zutaten aus `js/zutaten.js`: Quelle USDA FoodData Central, **Lizenz geprüft am 07.11.2026: gemeinfrei, CC0 1.0** (laut USDA
   „public domain, not copyrighted"; Zitat: U.S. Department of Agriculture, Agricultural Research Service. FoodData Central, 2019. fdc.nal.usda.gov). Dateien frei
   abrufbar, z. B. `https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip` (6 MB) und `..._foundation_food_csv_2025-12-18.zip`.
@@ -114,8 +114,7 @@ Teil 1 ist gebaut und online (Version v9), der Test am echten iPhone steht noch 
   mit Hinweis und Rückgängig. Außerdem Stück-Gewichte für Vorrats-Snacks (Eier, Bananen), damit die Nährwerte vorausgefüllt sind.
 
 ## Offen / Bekanntes
-- Phase 5, Teil 1: Test am iPhone (Körperdaten eingeben, Vorschlag und Erklärung prüfen, Zahlen ändern; Tagebuch: frei eintragen, aus dem Vorrat, scannen, zuletzt gegessen,
-  ändern, löschen, Tage blättern; Sicherung).
+- Nichts offen aus Phase 1 bis 5 Teil 1.
 - Echter Link-Import noch nicht an einer echten Seite geprüft; manche Seiten blockieren Programme (dann Text oder Foto an Claude Code).
 - Einheiten werden nicht umgerechnet (Zwiebel in Stück gegen kg im Vorrat: „unklar"). Möglich später: Gewichte pro Stück je Zutat.
 - Design bewusst schlicht, kommt in Phase 6. Bei vielen Rezepten ist die Gruppe „1–2 fehlen" lang; Sortierung nach ablaufenden Zutaten kommt in Phase 6.
