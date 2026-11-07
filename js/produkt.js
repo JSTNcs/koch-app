@@ -84,6 +84,7 @@ export function produktAusOff(antwort, barcode) {
     naehrwerte: naehrwerteAusOff(p.nutriments),
     quelle: 'off',
     gruppe: null,
+    zutat: null,
   };
 }
 
@@ -133,13 +134,14 @@ export function neuesProdukt(eingabe) {
     naehrwerte,
     quelle: eingabe.quelle === 'off' ? 'off' : 'manuell',
     gruppe: eingabe.gruppe ? String(eingabe.gruppe) : null,
+    zutat: eingabe.zutat && String(eingabe.zutat).trim() ? String(eingabe.zutat).trim() : null,
   };
 }
 
 // Aus einem Produkt und der gekauften Anzahl Packungen wird ein Vorrats-Eintrag.
 export function eintragAusProdukt(produkt, { anzahl = 1, ablauf = '' } = {}, optionen = {}) {
   if (produkt.art === 'da_leer') {
-    return neuerEintrag({ name: produkt.name, art: 'da_leer', ablauf, barcode: produkt.barcode }, optionen);
+    return neuerEintrag({ name: produkt.name, art: 'da_leer', ablauf, barcode: produkt.barcode, zutat: produkt.zutat }, optionen);
   }
   if (typeof anzahl !== 'number' || !Number.isFinite(anzahl) || anzahl <= 0) {
     throw new Error('Bitte eine Anzahl größer als 0 eintragen.');
@@ -152,6 +154,7 @@ export function eintragAusProdukt(produkt, { anzahl = 1, ablauf = '' } = {}, opt
       einheit: produkt.einheit,
       ablauf,
       barcode: produkt.barcode,
+      zutat: produkt.zutat,
     },
     optionen
   );

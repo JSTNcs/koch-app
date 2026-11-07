@@ -12,6 +12,8 @@ import {
   einraeumen,
 } from '../einkauf.js';
 import { parseZahl } from '../pantry.js';
+import { findeZutat } from '../zutaten.js';
+import { zutatenDatalist, ZUTATEN_LISTE_ID } from '../zutaten-ui.js';
 
 export async function render(container) {
   let liste = [];
@@ -192,7 +194,7 @@ export async function render(container) {
   // ---------- Freitext (Dinge ohne Marke) ----------
   function zeigeFreitext() {
     container.classList.remove('mit-leiste');
-    const name = h('input', { type: 'text', placeholder: 'z. B. Zwiebeln', autocomplete: 'off' });
+    const name = h('input', { type: 'text', list: ZUTATEN_LISTE_ID, placeholder: 'z. B. Zwiebeln', autocomplete: 'off' });
     const menge = h('input', { type: 'text', inputmode: 'decimal', value: '1' });
     const einheit = h(
       'select',
@@ -202,10 +204,15 @@ export async function render(container) {
       h('option', { value: 'ml' }, 'Milliliter (ml)')
     );
     const fehlerBox = h('div');
+    // Bekannte Zutat: die übliche Einheit wird vorgeschlagen (Hähnchenbrust -> g)
+    name.addEventListener('change', () => {
+      const z = findeZutat(name.value);
+      if (z && z.art === 'menge') einheit.value = z.einheit;
+    });
 
     async function hinzufuegen() {
       try {
-        const neu = neuerFreiEintrag({ name: name.value, anzahl: parseZahl(menge.value), einheit: einheit.value });
+        const neu = neuerFreiEintrag({ name: name.value, anzahl: parseZahl(menge.value), einheit: einheit.value, zutat: findeZutat(name.value)?.name ?? null });
         const r = fuegeHinzu(liste, neu);
         await schreibeAlles({ einkauf: { put: [r.eintrag] } });
         liste = r.liste;
@@ -218,6 +225,7 @@ export async function render(container) {
 
     ersetze(
       container,
+      zutatenDatalist(),
       h('h2', {}, 'Ohne Marke aufschreiben'),
       h('p', { class: 'menge' }, 'Für Dinge ohne Barcode, zum Beispiel Zwiebeln oder Hähnchenbrust.'),
       h('label', {}, 'Was?'),

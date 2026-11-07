@@ -1,6 +1,8 @@
 import { h } from '../dom.js';
 import { alle, speichere, loesche, datenSchuetzen } from '../db.js';
 import { ladeHinweis } from '../sicherung.js';
+import { schlageZutatVor, zutatVonEintrag, findeZutat } from '../zutaten.js';
+import { zutatenDatalist, ZUTATEN_LISTE_ID } from '../zutaten-ui.js';
 import {
   neuerEintrag,
   mengeAendern,
@@ -16,9 +18,11 @@ export async function render(container) {
   let liste = [];
 
   let sicherungsHinweis = null;
+  let produkteListe = [];
 
   async function laden() {
     liste = sortiere(await alle('vorrat'));
+    produkteListe = await alle('produkte');
     sicherungsHinweis = await ladeHinweis();
   }
 
@@ -122,6 +126,21 @@ export async function render(container) {
       h('option', { value: 'stk', selected: start.einheit === 'stk' }, 'Stück')
     );
     const ablauf = h('input', { type: 'date', value: start.ablauf || '' });
+    // Zutat für Rezepte: gesetzte Zutat, sonst der Vorschlag aus der eingebauten Liste (nur wenn er etwas Bekanntes trifft)
+    const vorschlag = alt
+      ? zutatVonEintrag(alt, produkteListe)
+      : { zutat: '', geraten: true };
+    const zutat = h('input', {
+      type: 'text',
+      list: ZUTATEN_LISTE_ID,
+      value: !vorschlag.geraten || findeZutat(vorschlag.zutat) ? vorschlag.zutat : '',
+      placeholder: 'z. B. Spaghetti',
+      autocomplete: 'off',
+    });
+    // Wird der Name geändert und die Zutat ist noch leer, kommt der Vorschlag automatisch
+    name.addEventListener('change', () => {
+      if (!zutat.value.trim()) zutat.value = schlageZutatVor(name.value) || '';
+    });
     const fehlerBox = h('div');
     const mengeBlock = h('div', {}, h('label', {}, 'Menge'), menge, h('label', {}, 'Einheit'), einheit);
 
@@ -139,6 +158,7 @@ export async function render(container) {
             einheit: einheit.value,
             ablauf: ablauf.value,
             barcode: start.barcode,
+            zutat: zutat.value,
           },
           { id: alt?.id }
         );
@@ -150,9 +170,12 @@ export async function render(container) {
     }
 
     container.replaceChildren(
+      zutatenDatalist(),
       h('h2', {}, alt ? 'Eintrag ändern' : 'Neuer Eintrag'),
       h('label', {}, 'Name'),
       name,
+      h('label', {}, 'Zutat für Rezepte (freiwillig)'),
+      zutat,
       h('label', {}, 'Art'),
       art,
       mengeBlock,

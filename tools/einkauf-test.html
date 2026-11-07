@@ -169,7 +169,7 @@ async function lauf() {
   await tippeCode(neuCode);
   ok(await bis(() => text().includes('Produkt prüfen')) && text().includes('Keine Verbindung'), 'Unbekanntes Produkt offline: Handeintrag');
   const g = [...doc().querySelectorAll('input[type=text]')];
-  tippe(g[0], 'Hafermilch'); tippe(g[1], '1000');
+  tippe(g[0], 'Hafermilch'); tippe(g[2], '1000'); // Felder: Name, Zutat, Packungsgröße
   doc().querySelectorAll('select')[1].value = 'ml';
   await klick('Zum Vorrat', 500);
   ok(text().includes('Steht nicht auf der Liste'), 'Auch ein neues Produkt fragt nach Ersatz');

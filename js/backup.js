@@ -2,13 +2,14 @@
 import { neuerEintrag } from './pantry.js';
 import { neuesProdukt } from './produkt.js';
 import { normalisiereListeneintrag } from './einkauf.js';
+import { neuesRezept } from './rezepte.js';
 
 const APP = 'koch-app';
 const VERSION = 1;
 const NICHT_SICHERN = ['letzteSicherung']; // gehört zu diesem Handy, nicht zu den Daten
 const TAG_MS = 86400000;
 
-export function erzeugeSicherung({ vorrat, produkte, einstellungen, einkauf }, jetzt = new Date()) {
+export function erzeugeSicherung({ vorrat, produkte, einstellungen, einkauf, rezepte }, jetzt = new Date()) {
   return {
     app: APP,
     version: VERSION,
@@ -17,6 +18,7 @@ export function erzeugeSicherung({ vorrat, produkte, einstellungen, einkauf }, j
       vorrat,
       produkte,
       einkauf: einkauf || [],
+      rezepte: rezepte || [],
       einstellungen: (einstellungen || []).filter((e) => !NICHT_SICHERN.includes(e.key)),
     },
   };
@@ -95,10 +97,25 @@ export function pruefeSicherung(text) {
     return e;
   });
 
+  // Rezepte gibt es erst seit Phase 3: In älteren Sicherungen fehlen sie, das ist in Ordnung.
+  if (d.rezepte !== undefined && !Array.isArray(d.rezepte)) throw new Error('Die Rezepte in der Datei sind beschädigt.');
+  const rezeptIds = new Set();
+  const rezepte = (d.rezepte || []).map((roh, i) => {
+    let r;
+    try {
+      r = neuesRezept(roh);
+    } catch (fehler) {
+      throw new Error(`Rezept ${i + 1}: ${fehler.message}`);
+    }
+    if (rezeptIds.has(r.id)) throw new Error('Bei den Rezepten kommt eine Kennung doppelt vor.');
+    rezeptIds.add(r.id);
+    return r;
+  });
+
   const einstellungen = (Array.isArray(d.einstellungen) ? d.einstellungen : []).filter(
     (e) => e && typeof e.key === 'string' && !NICHT_SICHERN.includes(e.key) && 'value' in e
   );
-  return { vorrat, produkte, einkauf, einstellungen, erstelltAm: typeof s.erstelltAm === 'string' ? s.erstelltAm : null };
+  return { vorrat, produkte, einkauf, rezepte, einstellungen, erstelltAm: typeof s.erstelltAm === 'string' ? s.erstelltAm : null };
 }
 
 // Volle Tage seit einem Zeitpunkt. Kaputtes oder fehlendes Datum: null.

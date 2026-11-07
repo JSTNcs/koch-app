@@ -1,0 +1,259 @@
+<!doctype html>
+<!-- Prüft Phase 3: Datenbank-Umstellung auf Version 3, Startpaket, "Was koche ich?", Portionen,
+     Einkaufsliste aus dem Rezept, Zutat beim Scan, Rezepte verwalten (eintippen, ändern, löschen, importieren), Sicherung.
+     Aufruf: node tools/browser-test.mjs tools/rezepte-test.html -->
+<meta charset="utf-8">
+<body style="margin:0;background:#888">
+<pre id="out" style="position:fixed;right:0;top:0;width:300px;background:#fff;font-size:11px;margin:0;padding:4px;z-index:99"></pre>
+<iframe id="app" style="width:390px;height:780px;border:0;background:#fff;display:block;margin:10px"></iframe>
+<script type="module">
+import { alle, speichere } from '../js/db.js';
+import { neuesProdukt } from '../js/produkt.js';
+import { neuerEintrag } from '../js/pantry.js';
+import { erstelleSicherung, liesSicherung, stelleWiederHer } from '../js/sicherung.js';
+
+const out = document.getElementById('out');
+const log = (s) => (out.textContent += s + '\n');
+const ok = (b, t) => log((b ? 'PASS ' : 'FAIL ') + t);
+const warte = (ms) => new Promise((r) => setTimeout(r, ms));
+const frame = document.getElementById('app');
+const doc = () => frame.contentDocument;
+const text = () => doc().body.innerText;
+const knopf = (s) => [...doc().querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(s));
+const klick = async (s, ms = 350) => { const k = knopf(s); if (!k) throw new Error('Knopf fehlt: ' + s + ' | Sichtbar: ' + text().slice(0, 250)); k.click(); await warte(ms); };
+const tippe = (el, w) => { el.value = w; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); };
+async function bis(f, ms = 8000) { const t = Date.now(); while (Date.now() - t < ms) { if (f()) return true; await warte(120); } return false; }
+const stabil = (x) => JSON.stringify(x, (k, v) => (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b))) : v));
+const ohneLeer = (x) => stabil(JSON.parse(JSON.stringify(x, (k, v) => (v === null ? undefined : v))));
+const mitPruefziffer = (b12) => b12 + ((10 - ([...b12].reduce((s, d, i) => s + Number(d) * (i % 2 ? 3 : 1), 0) % 10)) % 10);
+const karten = () => [...doc().querySelectorAll('.rezeptkarte')];
+const karte = (name) => karten().find((k) => k.querySelector('.titel').textContent === name);
+
+async function seite(hash) {
+  const geladen = new Promise((r) => (frame.onload = r));
+  if (frame.contentWindow.location.href.includes('index.html')) { frame.contentWindow.location.hash = hash; frame.contentWindow.location.reload(); }
+  else frame.src = '../index.html' + hash;
+  await geladen;
+  await bis(() => doc().querySelector('#screen')?.children.length, 10000);
+  await warte(300);
+}
+async function waehleDatei(inhalt, name = 'rezepte.json') {
+  const feld = doc().querySelector('input[type=file]');
+  const dt = new DataTransfer(); dt.items.add(new File([inhalt], name, { type: 'application/json' }));
+  feld.files = dt.files; feld.dispatchEvent(new Event('change'));
+  await warte(700);
+}
+
+async function lauf() {
+  // ===== 0. Alte Datenbank (Phase 2, Version 2) nachbauen =====
+  await new Promise((r) => { const q = indexedDB.deleteDatabase('koch-app'); q.onsuccess = q.onerror = q.onblocked = r; });
+  const alt = { id: 'alt1', name: 'Altes Salz', art: 'da_leer', menge: null, einheit: null, da: true, ablauf: null, barcode: null };
+  const altListe = { id: 'l1', typ: 'frei', barcode: null, name: 'Altes Brot', marke: null, produktArt: null, packung: null, einheit: 'stk', anzahl: 2, erledigt: false };
+  await new Promise((res, rej) => {
+    const q = indexedDB.open('koch-app', 2);
+    q.onupgradeneeded = () => { const d = q.result; d.createObjectStore('vorrat', { keyPath: 'id' }); d.createObjectStore('produkte', { keyPath: 'barcode' }); d.createObjectStore('einkauf', { keyPath: 'id' }); d.createObjectStore('einstellungen', { keyPath: 'key' }); };
+    q.onsuccess = () => { const d = q.result; const tx = d.transaction(['vorrat', 'einkauf'], 'readwrite'); tx.objectStore('vorrat').put(alt); tx.objectStore('einkauf').put(altListe); tx.oncomplete = () => { d.close(); res(); }; };
+    q.onerror = () => rej(q.error);
+  });
+  const v = await alle('vorrat'); // öffnet mit Version 3 -> Umstellung
+  ok(v.length === 1 && v[0].id === 'alt1' && (await alle('einkauf')).length === 1 && (await alle('rezepte')).length === 0, 'Umstellung auf Version 3: Vorrat und Liste unverändert, Tabelle "rezepte" da und leer');
+
+  // ===== Vorrat anlegen =====
+  const P = (b, n, packung, einheit, o = {}) => neuesProdukt({ barcode: b, name: n, art: 'menge', packung, einheit, ...o });
+  const barilla = P('4006381333931', 'Barilla Spaghetti N.5', 500, 'g');
+  const tomaten = P('96385074', 'Gehackte Tomaten', 400, 'g');
+  await speichere('produkte', barilla); await speichere('produkte', tomaten);
+  const E = (id, name, menge, einheit, o = {}) => speichere('vorrat', neuerEintrag({ name, art: 'menge', menge, einheit, ...o }, { id }));
+  await E('v1', 'Barilla Spaghetti N.5', 500, 'g', { barcode: barilla.barcode });
+  await E('v2', 'Gehackte Tomaten', 800, 'g', { barcode: tomaten.barcode });
+  await E('v3', 'Zwiebeln', 3, 'stk');
+  await E('v4', 'Knoblauch', 5, 'stk');
+  await E('v5', 'Vollmilch', 1000, 'ml');
+  await E('v6', 'Eier', 6, 'stk');
+  for (const [id, n] of [['s1', 'Salz'], ['s2', 'Pfeffer'], ['s3', 'Olivenöl']]) await speichere('vorrat', neuerEintrag({ name: n, art: 'da_leer' }, { id }));
+  await speichere('einkauf', { id: 'l1', typ: 'frei', barcode: null, name: 'Altes Brot', marke: null, produktArt: null, packung: null, einheit: 'stk', anzahl: 2, erledigt: false }); // ohne Zutat-Feld wie in Phase 2
+
+  // ===== 1. Was koche ich? ohne Rezepte =====
+  await seite('#/rezepte');
+  ok(text().includes('Es gibt noch keine Rezepte') && !!knopf('📥 Startpaket laden'), 'Ohne Rezepte: Hinweis und Knopf "Startpaket laden"');
+  await klick('📥 Startpaket laden', 900);
+  ok(text().includes('28 Rezepte aus dem Startpaket geladen'), 'Startpaket: 28 Rezepte geladen');
+  ok((await alle('rezepte')).length === 28, 'In der Datenbank liegen 28 Rezepte');
+
+  // ===== 2. Gruppen =====
+  const h2s = [...doc().querySelectorAll('h2')].map((x) => x.textContent);
+  ok(h2s.some((t) => t.startsWith('✔ Alles da')) && h2s.some((t) => t.startsWith('1–2 Zutaten fehlen')), 'Gruppen "Alles da" und "1–2 Zutaten fehlen" werden gezeigt');
+  const allesDa = () => { const ul = [...doc().querySelectorAll('h2')].find((x) => x.textContent.startsWith('✔ Alles da'))?.nextElementSibling; return ul ? [...ul.querySelectorAll('.titel')].map((x) => x.textContent) : []; };
+  ok(allesDa().includes('Spaghetti mit Tomatensauce'), 'Spaghetti mit Tomatensauce: alles da (Barilla zählt als Spaghetti, "Gehackte Tomaten" als Dosentomaten)');
+  ok(!allesDa().includes('Spaghetti Bolognese'), 'Spaghetti Bolognese gehört nicht zu "Alles da"');
+  const bolo = karte('Spaghetti Bolognese');
+  ok(!!bolo && bolo.textContent.includes('Hackfleisch') && bolo.textContent.includes('Karotten'), 'Bolognese steht bei "1–2 fehlen" mit "Fehlt: Hackfleisch, Karotten"');
+  const mehr = [...doc().querySelectorAll('details')].find((d) => d.textContent.includes('Mehr fehlt'));
+  ok(!!mehr && mehr.textContent.includes('Chili con Carne'), 'Chili con Carne steht unter "Mehr fehlt" (eingeklappt)');
+
+  // ===== 3. Rezept ansehen, Portionen =====
+  karte('Spaghetti mit Tomatensauce').click(); await warte(400);
+  ok(text().includes('Alles da, du kannst es kochen') && text().includes('Zubereitung') && text().includes('Zwiebel und Knoblauch fein hacken'), 'Rezeptansicht: Status, Zutaten, Zubereitung');
+  ok(text().includes('Du hast 500 g') && text().includes('200 g'), 'Zutat Spaghetti: braucht 200 g, du hast 500 g');
+  const zeileVon = (n) => [...doc().querySelectorAll('.zutat')].find((x) => x.querySelector('.titel').textContent.startsWith(n));
+  ok(zeileVon('Salz').textContent.includes('Ist da.') && zeileVon('Olivenöl').textContent.includes('Ist da.'), 'Salz und Olivenöl sind im Vorrat eingetragen: "Ist da."');
+  ok(zeileVon('Basilikum').textContent.includes('Nicht im Vorrat eingetragen') && zeileVon('Basilikum').textContent.includes('freiwillig'), 'Basilikum (freiwillig, nicht erfasst): "ich nehme an, du hast es"');
+  const plus = () => [...doc().querySelectorAll('.portionen button')].find((b) => b.textContent === '+');
+  const minus = () => [...doc().querySelectorAll('.portionen button')].find((b) => b.textContent === '−');
+  plus().click(); await warte(200); plus().click(); await warte(250);
+  ok(text().includes('4 Portionen') && text().includes('400 g'), '4 Portionen: Spaghetti 400 g');
+  plus().click(); await warte(200); plus().click(); await warte(300);
+  ok(text().includes('6 Portionen') && text().includes('es fehlen 100 g') && text().includes('Es fehlen 3 Zutaten'), '6 Portionen: Spaghetti 600 g (100 g fehlen), Tomaten und Knoblauch reichen auch nicht mehr');
+  minus().click(); await warte(200); minus().click(); await warte(200); minus().click(); await warte(200); minus().click(); await warte(200); minus().click(); await warte(250);
+  ok(text().includes('1 Portion') && text().includes('100 g'), '1 Portion: Spaghetti 100 g (nicht unter 1 Portion)');
+  minus().click(); await warte(250);
+  ok(text().includes('1 Portion'), 'Portionen gehen nie unter 1');
+  await klick('← Zurück');
+
+  // ===== 4. Fehlendes auf die Einkaufsliste =====
+  karte('Spaghetti Bolognese').click(); await warte(400);
+  ok(text().includes('Es fehlen 2 Zutaten') && !!knopf('🛒 Fehlendes auf die Einkaufsliste (2)'), 'Bolognese: es fehlen 2 Zutaten, Knopf mit Anzahl');
+  await klick('🛒 Fehlendes auf die Einkaufsliste', 500);
+  ok(text().includes('2 Einträge stehen jetzt auf der Einkaufsliste'), 'Meldung: 2 Einträge auf der Liste');
+  let liste = await alle('einkauf');
+  const hack = liste.find((e) => e.name === 'Hackfleisch'), karo = liste.find((e) => e.name === 'Karotten');
+  ok(hack?.typ === 'frei' && hack.anzahl === 250 && hack.einheit === 'g' && hack.zutat === 'Hackfleisch', 'Liste: Hackfleisch 250 g (Freitext mit Zutat)');
+  ok(karo?.typ === 'frei' && karo.anzahl === 1 && karo.einheit === 'stk', 'Liste: Karotten 1 Stück');
+  ok(liste.some((e) => e.id === 'l1'), 'Der alte Eintrag aus Phase 2 ist unverändert da');
+  await klick('🛒 Fehlendes auf die Einkaufsliste', 500);
+  liste = await alle('einkauf');
+  ok(text().includes('standen schon drauf') && liste.find((e) => e.name === 'Hackfleisch').anzahl === 250 && liste.length === 3, 'Nochmal tippen: nichts doppelt, Mengen bleiben (3 Einträge)');
+  await klick('← Zurück');
+
+  // ===== 5. Einkauf scannen: Freitext "Hackfleisch" wird durch Rinderhack erledigt =====
+  const rinderCode = mitPruefziffer('400000000002');
+  await speichere('produkte', P(rinderCode, 'Rinderhack', 500, 'g'));
+  await seite('#/einkauf');
+  ok(text().includes('Hackfleisch') && text().includes('Karotten') && text().includes('Altes Brot'), 'Einkauf-Tab zeigt die Rezept-Einträge und den alten Eintrag');
+  await klick('📷 Einkauf scannen', 600);
+  const e = doc().querySelector('input[inputmode="numeric"]'); e.closest('details').open = true; tippe(e, rinderCode); await klick('Suchen', 300);
+  ok(await bis(() => text().includes('Produkt prüfen')), 'Formular für Rinderhack');
+  ok(text().includes('Passt zu deiner Liste: Hackfleisch (250 g)'), 'Rinderhack passt zum Listeneintrag "Hackfleisch" (gleiche Zutat)');
+  const felder = [...doc().querySelectorAll('input[type=text]')];
+  ok(felder[1].value === 'Hackfleisch', 'Zutat-Feld ist mit "Hackfleisch" vorausgefüllt (Vorschlag der App)');
+  await klick('Zum Vorrat', 600);
+  ok(text().includes('Von der Liste genommen: Hackfleisch') && !text().includes('Steht nicht auf der Liste'), 'Listeneintrag wird ohne Rückfrage genommen');
+  liste = await alle('einkauf');
+  ok(!liste.some((x) => x.name === 'Hackfleisch') && liste.some((x) => x.name === 'Karotten'), 'Hackfleisch ist von der Liste, Karotten bleiben');
+  const rinderProdukt = (await alle('produkte')).find((p) => p.name === 'Rinderhack');
+  const vo = (await alle('vorrat')).find((x) => x.barcode === rinderProdukt.barcode);
+  ok(vo?.menge === 500 && vo.zutat === 'Hackfleisch', 'Vorrat: Rinderhack 500 g mit Zutat "Hackfleisch"');
+  ok((await alle('produkte')).find((p) => p.name === 'Rinderhack').zutat === 'Hackfleisch', 'Das Produkt merkt sich die Zutat');
+  await klick('Fertig', 500);
+
+  // ===== 6. Was koche ich? danach =====
+  await seite('#/rezepte');
+  const bolo2 = karte('Spaghetti Bolognese');
+  ok(!!bolo2 && bolo2.textContent.includes('Karotten') && !bolo2.textContent.includes('Hackfleisch'), 'Bolognese: jetzt fehlen nur noch Karotten');
+
+  // ===== 7. Zutat im Vorrat-Formular =====
+  await seite('#/vorrat');
+  [...[...doc().querySelectorAll('.eintrag')].find((x) => x.textContent.includes('Barilla Spaghetti N.5')).querySelectorAll('button')].find((b) => b.textContent === 'Ändern').click();
+  await warte(350);
+  const zf = [...doc().querySelectorAll('input[type=text]')];
+  ok(text().includes('Zutat für Rezepte') && zf[1].value === 'Spaghetti', 'Vorrat ändern: Zutat-Feld mit Vorschlag "Spaghetti" für den alten Eintrag');
+  await klick('Abbrechen');
+  await klick('＋ Von Hand');
+  const nf = [...doc().querySelectorAll('input[type=text]')];
+  tippe(nf[0], 'Hähnchenbrust'); await warte(100);
+  ok(nf[1].value === 'Hähnchenbrust', 'Neuer Eintrag: Zutat wird beim Eintippen des Namens vorgeschlagen');
+  await klick('Abbrechen');
+
+  // ===== 8. Rezepte verwalten =====
+  await seite('#/einstellungen');
+  await klick('📖 Rezepte verwalten', 500);
+  ok(text().includes('Meine Rezepte') && doc().querySelectorAll('.eintrag').length === 28, 'Verwaltung zeigt 28 Rezepte');
+  await klick('＋ Rezept eintippen', 400);
+  await klick('Speichern', 300);
+  ok(text().includes('Bitte einen Namen'), 'Leeres Rezept wird abgelehnt');
+  const f = () => [...doc().querySelectorAll('input[type=text]')];
+  tippe(f()[0], 'Testgericht'); // Name, Portionen (Vorgabe 2), Dauer
+  const zeilen = [...doc().querySelectorAll('.zutat-zeile')];
+  tippe(zeilen[0].querySelector('input'), 'Eier'); // Einheit wird vorgeschlagen
+  const mengeFeld = (z) => z.querySelectorAll('input[type=text]')[1];
+  tippe(mengeFeld(zeilen[0]), '3');
+  tippe(zeilen[1].querySelector('input'), 'Salz');
+  ok(zeilen[1].querySelector('select').value === 'bedarf', 'Salz: Einheit "nach Bedarf" wird vorgeschlagen');
+  tippe(zeilen[0].querySelector('select'), 'stk');
+  doc().querySelector('textarea').value = 'Eier verquirlen.\n\nBraten.';
+  await klick('Speichern', 500);
+  ok(text().includes('„Testgericht“ gespeichert'), 'Eigenes Rezept gespeichert');
+  const test1 = (await alle('rezepte')).find((r) => r.name === 'Testgericht');
+  ok(test1 && test1.zutaten.length === 2 && test1.zutaten[0].menge === 3 && test1.zutaten[1].art === 'da_leer' && test1.schritte.length === 2 && test1.id === 'testgericht', 'Rezept richtig gespeichert (2 Zutaten, 2 Schritte, Kennung "testgericht")');
+  // Gleicher Name: kein Überschreiben
+  await klick('＋ Rezept eintippen', 400);
+  tippe(f()[0], 'Testgericht');
+  const z2 = [...doc().querySelectorAll('.zutat-zeile')];
+  tippe(z2[0].querySelector('input'), 'Eier'); tippe(mengeFeld(z2[0]), '2'); tippe(z2[0].querySelector('select'), 'stk');
+  doc().querySelector('textarea').value = 'Braten.';
+  await klick('Speichern', 500);
+  ok((await alle('rezepte')).filter((r) => r.name === 'Testgericht').length === 2 && (await alle('rezepte')).some((r) => r.id === 'testgericht-2'), 'Gleicher Name: zweites Rezept, nichts überschrieben');
+  // Ändern
+  const zeileTest = [...doc().querySelectorAll('.eintrag')].find((x) => x.textContent.includes('Testgericht'));
+  [...zeileTest.querySelectorAll('button')].find((b) => b.textContent === 'Ändern').click(); await warte(400);
+  ok(text().includes('Rezept ändern') && f()[0].value === 'Testgericht', 'Ändern öffnet das Formular mit den Daten');
+  tippe(f()[0], 'Testgericht Neu');
+  await klick('Speichern', 500);
+  ok((await alle('rezepte')).some((r) => r.name === 'Testgericht Neu') && (await alle('rezepte')).length === 30, 'Änderung gespeichert, nichts verdoppelt (30 Rezepte)');
+  // Löschen
+  frame.contentWindow.confirm = () => true;
+  const zeileNeu = [...doc().querySelectorAll('.eintrag')].find((x) => x.textContent.includes('Testgericht Neu'));
+  [...zeileNeu.querySelectorAll('button')].find((b) => b.textContent === 'Löschen').click(); await warte(500);
+  ok((await alle('rezepte')).length === 29 && !(await alle('rezepte')).some((r) => r.name === 'Testgericht Neu'), 'Löschen entfernt das Rezept');
+
+  // ===== 9. Rezeptdatei importieren =====
+  const datei = (rezepte, o = {}) => JSON.stringify({ format: 'koch-app-rezepte', version: 1, rezepte, ...o });
+  const neuRoh = { id: 'import-1', name: 'Importiertes Rezept', portionen: 2, dauerMinuten: 15, zutaten: [{ zutat: 'Eier', menge: 2, einheit: 'stk' }, { zutat: 'Salz' }], schritte: ['Kochen.'], quelle: 'https://beispiel.de/rezept' };
+  await waehleDatei(datei([neuRoh, { ...neuRoh, id: 'testgericht-2', name: 'Testgericht ersetzt' }]));
+  ok(text().includes('Rezepte einlesen?') && text().includes('davon 1 neu') && text().includes('1 schon vorhandenes Rezept wird ersetzt'), 'Rückfrage: 1 neu, 1 wird ersetzt');
+  await klick('Abbrechen', 400);
+  ok((await alle('rezepte')).length === 29, 'Abbrechen verändert nichts');
+  await waehleDatei(datei([neuRoh, { ...neuRoh, id: 'testgericht-2', name: 'Testgericht ersetzt' }]));
+  await klick('Einlesen', 600);
+  ok(text().includes('2 Rezepte eingelesen') && (await alle('rezepte')).length === 30, 'Import: 1 neu, 1 ersetzt (30 Rezepte)');
+  ok((await alle('rezepte')).find((r) => r.id === 'testgericht-2').name === 'Testgericht ersetzt', 'Gleiche Kennung ersetzt das vorhandene Rezept');
+  const kaputt = [['hallo', /gelesen/], ['{"a":1}', /keine Rezeptdatei/], [datei([{ ...neuRoh, portionen: 0 }]), /Rezept 1.*Portionen/], [datei([]), /keine Rezepte/], [datei([neuRoh], { version: 5 }), /neueren Version/]];
+  const vorher = stabil((await alle('rezepte')).sort((a, b) => a.id.localeCompare(b.id)));
+  for (const [inhalt, muster] of kaputt) {
+    await waehleDatei(inhalt);
+    ok(muster.test(text()) && !knopf('Einlesen'), 'kaputte Rezeptdatei abgelehnt: ' + inhalt.slice(0, 30));
+  }
+  ok(stabil((await alle('rezepte')).sort((a, b) => a.id.localeCompare(b.id))) === vorher, 'kaputte Dateien verändern keine Rezepte');
+  await klick('📥 Startpaket', 800);
+  ok(text().includes('28 Rezepte, davon 0 neu') && text().includes('28 schon vorhandene Rezepte werden ersetzt'), 'Startpaket erneut laden: warnt, dass 28 Rezepte ersetzt werden');
+  await klick('Abbrechen', 300);
+
+  // ===== 10. Sicherung enthält Rezepte, Zutaten und Listen =====
+  const s = await erstelleSicherung();
+  ok(s.anzahlRezepte === 30 && JSON.parse(s.text).daten.rezepte.length === 30, 'Sicherung enthält 30 Rezepte');
+  const vorSicherung = ohneLeer({ r: (await alle('rezepte')).sort((a, b) => a.id.localeCompare(b.id)), p: (await alle('produkte')).sort((a, b) => a.barcode.localeCompare(b.barcode)), v: (await alle('vorrat')).sort((a, b) => a.id.localeCompare(b.id)) });
+  await new Promise((r) => { const t = indexedDB.open('koch-app'); t.onsuccess = () => { const tx = t.result.transaction('rezepte', 'readwrite'); tx.objectStore('rezepte').clear(); tx.oncomplete = () => { t.result.close(); r(); }; }; });
+  await stelleWiederHer(liesSicherung(s.text));
+  const nachSicherung = ohneLeer({ r: (await alle('rezepte')).sort((a, b) => a.id.localeCompare(b.id)), p: (await alle('produkte')).sort((a, b) => a.barcode.localeCompare(b.barcode)), v: (await alle('vorrat')).sort((a, b) => a.id.localeCompare(b.id)) });
+  if (vorSicherung !== nachSicherung) {
+    const a = JSON.parse(vorSicherung), b = JSON.parse(nachSicherung);
+    for (const teil of ['r', 'p', 'v']) for (let i = 0; i < Math.max(a[teil].length, b[teil].length); i++) if (stabil(a[teil][i]) !== stabil(b[teil][i])) log('INFO Unterschied in ' + teil + '[' + i + ']: vorher ' + stabil(a[teil][i]) + ' | nachher ' + stabil(b[teil][i]));
+  }
+  ok(vorSicherung === nachSicherung, 'Einspielen stellt Rezepte, Produkte (mit Zutat) und Vorrat (mit Zutat) genau wieder her');
+  await seite('#/einstellungen');
+  await waehleDatei(s.text, 'sicherung.json');
+  ok(text().includes('30 Rezepte'), 'Rückfrage beim Einspielen nennt "30 Rezepte"');
+  await klick('Abbrechen', 300);
+
+  // ===== 11. Layout =====
+  await seite('#/rezepte');
+  ok(!/null|undefined|object/.test(text()), 'Was koche ich?: kein "null"/"undefined" sichtbar');
+  ok(doc().documentElement.scrollWidth <= 390, 'Übersicht: kein seitliches Scrollen (' + doc().documentElement.scrollWidth + ')');
+  const kk = karte('Spaghetti Bolognese'); const kh = kk.getBoundingClientRect().height;
+  ok(kh >= 56, 'Rezeptkarten sind hoch genug (' + Math.round(kh) + ' px)');
+  kk.click(); await warte(400);
+  ok(!/null|undefined|object/.test(text()) && doc().documentElement.scrollWidth <= 390, 'Rezeptansicht: sauber und kein seitliches Scrollen (' + doc().documentElement.scrollWidth + ')');
+  log('FERTIG');
+}
+lauf().catch((e) => { log('FAIL Fehler: ' + e.message + ' | ' + (e.stack || '').split('\n')[1]); log('FERTIG'); });
+</script>

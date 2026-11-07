@@ -41,16 +41,17 @@ export function neuerEintrag(eingabe, { id = crypto.randomUUID() } = {}) {
   if (ablaufRoh && !gueltigesDatum(ablaufRoh)) throw new Error('Ungültiges Datum für das Ablaufdatum.');
   const ablauf = ablaufRoh || null;
   const barcode = eingabe.barcode ? String(eingabe.barcode).trim() || null : null;
+  const zutat = eingabe.zutat ? String(eingabe.zutat).trim() || null : null; // Zutat für Rezepte, z. B. "Spaghetti"
 
   if (eingabe.art === 'da_leer') {
-    return { id, name, art: 'da_leer', menge: null, einheit: null, da: true, ablauf, barcode };
+    return { id, name, art: 'da_leer', menge: null, einheit: null, da: true, ablauf, barcode, zutat };
   }
 
   if (!EINHEITEN.includes(eingabe.einheit)) throw new Error('Ungültige Einheit (g, ml oder Stück).');
   if (typeof eingabe.menge !== 'number' || !Number.isFinite(eingabe.menge) || eingabe.menge < 0) {
     throw new Error('Bitte eine gültige Menge eintragen (0 oder mehr).');
   }
-  return { id, name, art: 'menge', menge: eingabe.menge, einheit: eingabe.einheit, da: null, ablauf, barcode };
+  return { id, name, art: 'menge', menge: eingabe.menge, einheit: eingabe.einheit, da: null, ablauf, barcode, zutat };
 }
 
 // Schrittgröße für die Plus/Minus-Knöpfe
@@ -100,8 +101,8 @@ export function hinzufuegenOderErhoehen(liste, neu) {
   const alt = liste[i];
   const zusammen =
     alt.art === 'menge'
-      ? { ...alt, menge: alt.menge + neu.menge, ablauf: fruehereres(alt.ablauf, neu.ablauf), barcode: alt.barcode || neu.barcode }
-      : { ...alt, da: true, ablauf: fruehereres(alt.ablauf, neu.ablauf) };
+      ? { ...alt, menge: alt.menge + neu.menge, ablauf: fruehereres(alt.ablauf, neu.ablauf), barcode: alt.barcode || neu.barcode, zutat: alt.zutat || neu.zutat }
+      : { ...alt, da: true, ablauf: fruehereres(alt.ablauf, neu.ablauf), zutat: alt.zutat || neu.zutat };
   const kopie = [...liste];
   kopie[i] = zusammen;
   return { liste: kopie, zusammengefuehrt: true, eintrag: zusammen };

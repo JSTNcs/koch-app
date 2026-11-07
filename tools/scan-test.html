@@ -88,8 +88,8 @@ async function lauf() {
   ok(gefunden, 'Open Food Facts kennt 3017620422003 (CORS und Netz ok)');
   const felder = () => [...doc().querySelectorAll('input[type=text]')];
   ok(felder()[0].value.length > 0, 'Name vorausgefüllt: "' + felder()[0].value + '"');
-  ok(felder()[1].value === '450' || felder()[1].value.length > 0, 'Packungsgröße vorausgefüllt: "' + felder()[1].value + '" ' + doc().querySelectorAll('select')[1].value);
-  const kcalFeld = felder()[3];
+  ok(felder()[2].value === '450' || felder()[2].value.length > 0, 'Packungsgröße vorausgefüllt: "' + felder()[2].value + '" ' + doc().querySelectorAll('select')[1].value);
+  const kcalFeld = felder()[4];
   log('INFO Nährwerte: kcal=' + kcalFeld.value);
   await klick('Zum Vorrat', 500);
   ok(text().includes('✔ Hinzugefügt'), 'Produkt zum Vorrat hinzugefügt');
@@ -116,14 +116,14 @@ async function lauf() {
   await klick('Zum Vorrat', 300);
   ok(text().includes('Bitte einen Namen'), 'ohne Name wird nicht gespeichert');
   let f = felder();
-  tippe(f[0], 'Testnudeln'); tippe(f[1], '500');
+  tippe(f[0], 'Testnudeln'); tippe(f[2], '500');
   await klick('Zum Vorrat', 500);
   ok(text().includes('✔ Hinzugefügt'), 'von Hand eingetragen');
   await klick('📷 Nächstes Produkt', 600);
   tippe(doc().querySelector('input[inputmode="numeric"]'), '4006381333931');
   await klick('Suchen', 200);
   ok(await bis(() => text().includes('Produkt prüfen')), 'noch einmal gleicher Barcode');
-  ok(text().includes('kennt die App schon') && felder()[0].value === 'Testnudeln' && felder()[1].value === '500', 'App hat sich das Produkt gemerkt (offline)');
+  ok(text().includes('kennt die App schon') && felder()[0].value === 'Testnudeln' && felder()[2].value === '500', 'App hat sich das Produkt gemerkt (offline)');
   await klick('Abbrechen', 400);
   ok(doc().querySelectorAll('.eintrag').length === 2, 'Abbrechen legt nichts an (2 Einträge)');
 

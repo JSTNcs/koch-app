@@ -32,7 +32,10 @@ Der Nutzer hat keine Programmiererfahrung: Antworten auf Deutsch, einfach erklä
 - **Einkaufsliste:** Eintrag ist ein Produkt (Marke, Barcode, Anzahl Packungen) oder Freitext ohne Marke (Menge, Einheit); abgehakt ja/nein.
   Gescannte Produkte werden von der Liste genommen, in den Vorrat kommt immer das gescannte Produkt.
 - **Vorrat:** Produkt oder lose Zutat, Menge, Einheit, Ablaufdatum (optional), Art = `menge` oder `da_leer`
-- **Rezept:** Name, Portionen, Zutaten (Zutat, Menge, Einheit, optional ja/nein), Schritte, Quelle
+- **Rezept:** Name, Portionen, Dauer (optional), Zutaten (Zutat, Menge, Einheit, optional ja/nein, Hinweis), Schritte, Quelle.
+  Die Zutat im Rezept ist der allgemeine Name aus der eingebauten Zutatenliste (`js/zutaten.js`, rund 100 Zutaten mit Synonymen).
+  Produkte, Vorratseinträge und Listeneinträge haben ein Feld **Zutat** (Vorschlag der App aus dem Namen, vom Nutzer korrigierbar).
+  So findet "Spaghetti" im Rezept jede Marke im Vorrat. Gewürze, Öl, Salz: nur da/leer, ohne Eintrag im Vorrat gelten sie als vorhanden.
 - **Mahlzeit:** Datum, Rezept oder Produkt, gegessene Menge/Portion, Nährwerte
 - **Rest:** Rezept, Portionen übrig, gekocht am
 - **Einstellungen:** Körperdaten für das Tagesziel, Tagesziel, letzte Sicherung
@@ -49,6 +52,8 @@ Der Nutzer hat keine Programmiererfahrung: Antworten auf Deutsch, einfach erklä
    Wegen der Browser-Sicherheit (CORS) kann die App fremde Seiten nicht selbst abrufen. Deshalb läuft
    der Import zunächst am PC: Der Nutzer gibt Claude Code den Link, Claude Code erzeugt die Rezeptdatei,
    die App importiert sie. Ein Proxy oder Server kommt nur nach Rückfrage.
+   Umgesetzt: `node tools/rezept-aus-link.mjs <Link>` und Format-Beschreibung in `rezepte/README.md`. Importdateien liegen in
+   `rezepte/importe/` (in `.gitignore`, wegen Urheberrecht nie ins öffentliche Repository).
 
 ## Bildschirme (entschieden)
 1. **Vorrat:** Was ist da, Mengen, Ablaufdatum, Scan-Knopf

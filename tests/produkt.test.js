@@ -53,6 +53,7 @@ test('produktAusOff: vollständiges Produkt', () => {
     naehrwerte: { kcal: 539, eiweiss: 6.3, kohlenhydrate: 57.5, fett: 30.9 },
     quelle: 'off',
     gruppe: null,
+    zutat: null,
   });
 });
 test('produktAusOff: nicht gefunden ergibt null', () => {
@@ -107,6 +108,7 @@ test('neuesProdukt: von Hand mit Nährwerten', () => {
     naehrwerte: { kcal: 370, eiweiss: 13, kohlenhydrate: 59, fett: 7 },
     quelle: 'manuell',
     gruppe: null,
+    zutat: null,
   });
 });
 test('neuesProdukt: Nährwerte sind freiwillig; leere Felder ergeben null', () => {
@@ -196,4 +198,18 @@ test('gruppeVon: schlägt die Gruppe nach', () => {
   assert.equal(gruppeVon('4006381333931', [a]), 'g1');
   assert.equal(gruppeVon('4006381333931', [mkp('4006381333931', 'X')]), null);
   assert.equal(gruppeVon('999', [a]), null);
+});
+
+// --- Zutat für Rezepte ---
+test('neuesProdukt: Zutat wird gemerkt; leer ergibt null', () => {
+  const ok = { barcode: '4006381333931', name: 'Barilla Spaghetti', art: 'menge', packung: 500, einheit: 'g' };
+  assert.equal(neuesProdukt({ ...ok, zutat: ' Spaghetti ' }).zutat, 'Spaghetti');
+  assert.equal(neuesProdukt({ ...ok, zutat: '' }).zutat, null);
+  assert.equal(neuesProdukt(ok).zutat, null);
+});
+test('eintragAusProdukt: gibt die Zutat an den Vorrat weiter', () => {
+  const p = neuesProdukt({ barcode: '4006381333931', name: 'Barilla Spaghetti', art: 'menge', packung: 500, einheit: 'g', zutat: 'Spaghetti' });
+  assert.equal(eintragAusProdukt(p, { anzahl: 1 }, { id: 'e' }).zutat, 'Spaghetti');
+  const salz = neuesProdukt({ barcode: '4006381333931', name: 'Salz', art: 'da_leer', zutat: 'Salz' });
+  assert.equal(eintragAusProdukt(salz, {}, { id: 'e' }).zutat, 'Salz');
 });

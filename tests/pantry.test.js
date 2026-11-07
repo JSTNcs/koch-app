@@ -50,6 +50,7 @@ test('neuerEintrag: Menge-Eintrag', () => {
     da: null,
     ablauf: '2027-01-31',
     barcode: '4001234567890',
+    zutat: null,
   });
 });
 test('neuerEintrag: Gewürz hat nur da/leer, keine Menge', () => {
@@ -166,4 +167,17 @@ test('hinzufuegenOderErhoehen: Original-Liste bleibt unverändert', () => {
   hinzufuegenOderErhoehen(liste, mk({ name: 'Reis', menge: 100 }));
   assert.equal(liste[0].menge, 100);
   assert.equal(liste.length, 1);
+});
+
+// --- Zutat für Rezepte ---
+test('neuerEintrag: Zutat wird gemerkt, leer ergibt null', () => {
+  assert.equal(neuerEintrag({ name: 'Barilla Spaghetti', art: 'menge', menge: 500, einheit: 'g', zutat: ' Spaghetti ' }, { id: 'z' }).zutat, 'Spaghetti');
+  assert.equal(neuerEintrag({ name: 'X', art: 'menge', menge: 1, einheit: 'g', zutat: '  ' }, { id: 'z' }).zutat, null);
+  assert.equal(neuerEintrag({ name: 'Salz', art: 'da_leer', zutat: 'Salz' }, { id: 'z' }).zutat, 'Salz');
+});
+test('hinzufuegenOderErhoehen: Zutat bleibt erhalten oder wird ergänzt', () => {
+  const alt = neuerEintrag({ name: 'Reis', art: 'menge', menge: 100, einheit: 'g' }, { id: 'a' });
+  const neu = neuerEintrag({ name: 'Reis', art: 'menge', menge: 100, einheit: 'g', zutat: 'Reis' }, { id: 'b' });
+  assert.equal(hinzufuegenOderErhoehen([alt], neu).eintrag.zutat, 'Reis');
+  assert.equal(hinzufuegenOderErhoehen([neu], alt).eintrag.zutat, 'Reis');
 });

@@ -6,6 +6,7 @@
 // "erledigt" bedeutet: im Laden abgehakt.
 import { EINHEITEN, neuerEintrag, hinzufuegenOderErhoehen, schritt, formatMenge } from './pantry.js';
 import { eintragAusProdukt, gruppeVon } from './produkt.js';
+import { schluessel, zutatVonProdukt } from './zutaten.js';
 
 const runde = (n) => Math.round(n * 100) / 100;
 const zahlDeutsch = (n) => String(runde(n)).replace('.', ',');
@@ -38,15 +39,28 @@ export function neuerProduktEintrag(produkt, anzahl = 1, { id = crypto.randomUUI
     einheit: menge ? produkt.einheit : null,
     anzahl,
     erledigt: false,
+    zutat: produkt.zutat || null,
   };
 }
 
-export function neuerFreiEintrag({ name, anzahl = 1, einheit = 'stk' }, { id = crypto.randomUUID() } = {}) {
+export function neuerFreiEintrag({ name, anzahl = 1, einheit = 'stk', zutat = null }, { id = crypto.randomUUID() } = {}) {
   const n = String(name ?? '').trim();
   if (!n) throw new Error('Bitte einen Namen eintragen.');
   if (!EINHEITEN.includes(einheit)) throw new Error('Ungültige Einheit (g, ml oder Stück).');
   if (!istPositiv(anzahl)) throw new Error('Bitte eine Menge größer als 0 eintragen.');
-  return { id, typ: 'frei', barcode: null, name: n, marke: null, produktArt: null, packung: null, einheit, anzahl, erledigt: false };
+  return {
+    id,
+    typ: 'frei',
+    barcode: null,
+    name: n,
+    marke: null,
+    produktArt: null,
+    packung: null,
+    einheit,
+    anzahl,
+    erledigt: false,
+    zutat: zutat ? String(zutat).trim() || null : null,
+  };
 }
 
 // ---------- Liste pflegen ----------
@@ -113,12 +127,12 @@ export function eintragTexte(e) {
 // ---------- Von der Liste in den Vorrat ----------
 
 export function produktAusEintrag(e) {
-  return { barcode: e.barcode, name: e.name, marke: e.marke, art: e.produktArt, packung: e.packung, einheit: e.einheit };
+  return { barcode: e.barcode, name: e.name, marke: e.marke, art: e.produktArt, packung: e.packung, einheit: e.einheit, zutat: e.zutat ?? null };
 }
 
 function zuVorratEintrag(e) {
   if (e.typ === 'produkt') return eintragAusProdukt(produktAusEintrag(e), { anzahl: e.anzahl });
-  return neuerEintrag({ name: e.name, art: 'menge', menge: e.anzahl, einheit: e.einheit });
+  return neuerEintrag({ name: e.name, art: 'menge', menge: e.anzahl, einheit: e.einheit, zutat: e.zutat });
 }
 
 // Alle abgehakten Einträge werden in den Vorrat gelegt (Menge = Packungsgröße mal Anzahl).
@@ -141,8 +155,13 @@ export function einraeumen(liste, vorrat) {
 // Offene Einträge haben Vorrang vor abgehakten. Kein Treffer: null.
 export function findeTreffer(liste, gescannt, alleProdukte) {
   const gruppe = gescannt.gruppe || gruppeVon(gescannt.barcode, alleProdukte);
+  const zutat = schluessel(zutatVonProdukt(gescannt).zutat);
   const passt = (e) => {
-    if (e.typ === 'frei') return norm(e.name).trim() === norm(gescannt.name).trim();
+    if (e.typ === 'frei') {
+      // Freitext passt zu jedem Produkt derselben Zutat (Rezept: "Spaghetti", gescannt: "Barilla Spaghetti")
+      if (e.zutat && schluessel(e.zutat) === zutat) return true;
+      return norm(e.name).trim() === norm(gescannt.name).trim();
+    }
     if (e.barcode === gescannt.barcode) return true;
     return Boolean(gruppe) && gruppeVon(e.barcode, alleProdukte) === gruppe;
   };
@@ -181,7 +200,14 @@ export function normalisiereListeneintrag(roh) {
   const name = String(roh.name ?? '').trim();
   if (!name) throw new Error('Bitte einen Namen eintragen.');
   if (!istPositiv(roh.anzahl)) throw new Error('Die Anzahl muss größer als 0 sein.');
-  const basis = { id: roh.id, typ: roh.typ, name, anzahl: roh.anzahl, erledigt: roh.erledigt === true };
+  const basis = {
+    id: roh.id,
+    typ: roh.typ,
+    name,
+    anzahl: roh.anzahl,
+    erledigt: roh.erledigt === true,
+    zutat: typeof roh.zutat === 'string' && roh.zutat.trim() ? roh.zutat.trim() : null,
+  };
 
   if (roh.typ === 'frei') {
     if (!EINHEITEN.includes(roh.einheit)) throw new Error('Ungültige Einheit (g, ml oder Stück).');

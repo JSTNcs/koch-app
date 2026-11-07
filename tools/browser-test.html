@@ -40,7 +40,7 @@ async function lauf() {
   await klick('＋ Von Hand');
   const felder = doc().querySelectorAll('input');
   tippe(felder[0], 'Nudeln');
-  tippe(felder[1], '500');
+  tippe(felder[2], '500'); // Eingabefelder: Name, Zutat, Menge
   await klick('Speichern');
   ok(text().includes('Nudeln') && text().includes('500 g'), 'Nudeln mit 500 g angelegt');
 
@@ -52,7 +52,7 @@ async function lauf() {
   // Falsche Eingabe
   await klick('＋ Von Hand');
   tippe(doc().querySelectorAll('input')[0], 'Reis');
-  tippe(doc().querySelectorAll('input')[1], 'abc');
+  tippe(doc().querySelectorAll('input')[2], 'abc');
   await klick('Speichern');
   ok(text().includes('gültige Menge'), 'Fehlermeldung bei "abc" als Menge');
   await klick('Abbrechen');

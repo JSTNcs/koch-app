@@ -33,7 +33,7 @@ test('jede Datei in der Offline-Liste existiert', () => {
 
 test('jede App-Datei steht in der Offline-Liste', () => {
   const liste = new Set(assetListe());
-  const app = [...alleDateien('js'), ...alleDateien('css'), ...alleDateien('icons'), ...alleDateien('lib')];
+  const app = [...alleDateien('js'), ...alleDateien('css'), ...alleDateien('icons'), ...alleDateien('lib'), ...alleDateien('daten')];
   for (const datei of app) {
     // Lizenzdateien werden nicht von der App geladen
     if (/LICENSE|\.md$|\.txt$/i.test(datei)) continue;

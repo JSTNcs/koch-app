@@ -6,6 +6,8 @@
 //   'einkaufen' Produkt kommt in den Vorrat UND wird von der Einkaufsliste genommen. Passt es zu keinem
 //               Eintrag, fragt die App: "Ist das Ersatz für …?" (andere Firma, gleiches Produkt).
 import { h, ersetze } from '../dom.js';
+import { schlageZutatVor } from '../zutaten.js';
+import { zutatenDatalist, ZUTATEN_LISTE_ID } from '../zutaten-ui.js';
 import { alle, hole, schreibeAlles } from '../db.js';
 import { starteScanner } from '../scanner.js';
 import { barcodeGueltig, bereinigeBarcode, normalisiereBarcode } from '../barcode.js';
@@ -146,7 +148,8 @@ export function starteScan(container, { fertig, modus = 'vorrat' }) {
         const treffer = findeTreffer(liste, produkt, alleProdukte);
         if (treffer) {
           const t = eintragTexte(treffer);
-          anzahlStart = treffer.typ === 'produkt' ? treffer.anzahl : 1;
+          if (treffer.typ === 'produkt') anzahlStart = treffer.anzahl;
+          else if (treffer.einheit === produkt.einheit && produkt.packung) anzahlStart = Math.max(1, Math.ceil(treffer.anzahl / produkt.packung));
           hinweis = {
             typ: '',
             text: `Passt zu deiner Liste: ${t.titel} (${t.menge}). Nach dem Eintragen wird es von der Liste genommen. ${hinweis.text}`,
@@ -172,6 +175,8 @@ export function starteScan(container, { fertig, modus = 'vorrat' }) {
       h('option', { value: 'menge', selected: start.art === 'menge' }, 'Abgemessen (g, ml oder Stück)'),
       h('option', { value: 'da_leer', selected: start.art === 'da_leer' }, 'Gewürz, Öl, Salz: nur da / leer')
     );
+    // Die Zutat verbindet das Produkt mit Rezepten ("Barilla Spaghetti" -> "Spaghetti"). Die App macht einen Vorschlag.
+    const zutat = h('input', { type: 'text', list: ZUTATEN_LISTE_ID, value: start.zutat || schlageZutatVor(start.name) || '', placeholder: 'z. B. Spaghetti', autocomplete: 'off' });
     const packung = h('input', { type: 'text', inputmode: 'decimal', value: zahlText(start.packung), placeholder: 'z. B. 500' });
     const einheit = h(
       'select',
@@ -214,6 +219,7 @@ export function starteScan(container, { fertig, modus = 'vorrat' }) {
           naehrwerte: { kcal: leerOderZahl(kcal), eiweiss: leerOderZahl(eiweiss), kohlenhydrate: leerOderZahl(kh), fett: leerOderZahl(fett) },
           quelle: start.quelle,
           gruppe: start.gruppe,
+          zutat: zutat.value,
         });
         const anzahlWert = art.value === 'menge' ? parseZahl(anzahl.value) : 1;
 
@@ -244,8 +250,11 @@ export function starteScan(container, { fertig, modus = 'vorrat' }) {
       h('h2', {}, 'Produkt prüfen'),
       h('p', { class: 'menge' }, `Barcode ${start.barcode}`),
       hinweisBox(hinweis?.typ, hinweis?.text),
+      zutatenDatalist(),
       h('label', {}, 'Name'),
       name,
+      h('label', {}, 'Zutat für Rezepte (Vorschlag, freiwillig)'),
+      zutat,
       h('label', {}, 'Art'),
       art,
       mengeBlock,
@@ -310,7 +319,14 @@ export function starteScan(container, { fertig, modus = 'vorrat' }) {
     const listenInfo = [];
 
     if (treffer) {
-      const v = verbucheScan(treffer, anzahlWert);
+      // Freitext steht in g/ml/Stück ("Spaghetti 400 g"), gescannt wurden Packungen: dann Packung mal Anzahl verrechnen
+      const gekauft =
+        treffer.typ === 'frei'
+          ? produkt.einheit && produkt.einheit === treffer.einheit
+            ? produkt.packung * anzahlWert
+            : treffer.anzahl
+          : anzahlWert;
+      const v = verbucheScan(treffer, gekauft);
       const t = eintragTexte(treffer);
       if (v.loeschen) {
         aenderung.einkauf.loesche.push(v.loeschen);

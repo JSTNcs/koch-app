@@ -4,6 +4,7 @@ import { erzeugeSicherung, pruefeSicherung, sicherungsDateiname, tageSeit, siche
 import { neuerEintrag, setzeDa } from '../js/pantry.js';
 import { neuesProdukt } from '../js/produkt.js';
 import { neuerProduktEintrag, neuerFreiEintrag, schalteHaken } from '../js/einkauf.js';
+import { neuesRezept } from '../js/rezepte.js';
 
 const JETZT = new Date('2026-11-06T12:00:00.000Z');
 const tageZurueck = (n, extraMs = 0) => new Date(JETZT.getTime() - n * 86400000 - extraMs).toISOString();
@@ -164,4 +165,46 @@ test('Einkaufsliste: ungültiger Eintrag wird mit Nummer gemeldet, doppelte Kenn
   const keinArray = JSON.parse(JSON.stringify(s));
   keinArray.daten.einkauf = 'x';
   assert.throws(() => pruefeSicherung(JSON.stringify(keinArray)), /Einkaufsliste/);
+});
+
+// --- Rezepte in der Sicherung ---
+const rezept1 = neuesRezept({
+  id: 'r1',
+  name: 'Rührei',
+  portionen: 1,
+  dauerMinuten: 5,
+  zutaten: [{ zutat: 'Eier', menge: 3, einheit: 'stk' }, { zutat: 'Salz', art: 'da_leer', optional: true, notiz: 'eine Prise' }],
+  schritte: ['Eier verquirlen.', 'Braten.'],
+  quelle: 'Eigenes Rezept',
+});
+
+test('Rezepte: kommen in die Sicherung und wieder heraus', () => {
+  const s = erzeugeSicherung({ ...daten(), rezepte: [rezept1] }, JETZT);
+  assert.equal(s.daten.rezepte.length, 1);
+  assert.deepEqual(pruefeSicherung(JSON.stringify(s)).rezepte, [rezept1]);
+});
+test('Rezepte: alte Sicherungen ohne Rezepte bleiben lesbar', () => {
+  const alt = gueltig();
+  delete alt.daten.rezepte;
+  assert.deepEqual(pruefeSicherung(JSON.stringify(alt)).rezepte, []);
+  assert.deepEqual(erzeugeSicherung(daten(), JETZT).daten.rezepte, []);
+});
+test('Rezepte: ungültiges Rezept wird mit Nummer gemeldet, doppelte Kennung abgelehnt', () => {
+  const s = JSON.parse(JSON.stringify(erzeugeSicherung({ ...daten(), rezepte: [rezept1, { ...rezept1, id: 'r2' }] }, JETZT)));
+  const kaputt = JSON.parse(JSON.stringify(s));
+  kaputt.daten.rezepte[1].portionen = 0;
+  assert.throws(() => pruefeSicherung(JSON.stringify(kaputt)), /Rezept 2.*Portionen/);
+  const doppelt = JSON.parse(JSON.stringify(s));
+  doppelt.daten.rezepte[1].id = 'r1';
+  assert.throws(() => pruefeSicherung(JSON.stringify(doppelt)), /doppelt/);
+  const keinArray = JSON.parse(JSON.stringify(s));
+  keinArray.daten.rezepte = 'x';
+  assert.throws(() => pruefeSicherung(JSON.stringify(keinArray)), /Rezepte/);
+});
+test('Zutat im Vorratseintrag und im Produkt überlebt die Sicherung', () => {
+  const e = neuerEintrag({ name: 'Barilla Spaghetti', art: 'menge', menge: 500, einheit: 'g', zutat: 'Spaghetti' }, { id: 'z1' });
+  const p = neuesProdukt({ barcode: '4006381333931', name: 'Barilla Spaghetti', art: 'menge', packung: 500, einheit: 'g', zutat: 'Spaghetti' });
+  const r = pruefeSicherung(JSON.stringify(erzeugeSicherung({ vorrat: [e], produkte: [p], einstellungen: [] }, JETZT)));
+  assert.equal(r.vorrat[0].zutat, 'Spaghetti');
+  assert.equal(r.produkte[0].zutat, 'Spaghetti');
 });

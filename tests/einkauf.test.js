@@ -41,6 +41,7 @@ test('neuerProduktEintrag: Produkt mit Anzahl', () => {
     einheit: 'g',
     anzahl: 2,
     erledigt: false,
+    zutat: null,
   });
 });
 test('neuerProduktEintrag: Anzahl ist standardmäßig 1, muss größer als 0 sein', () => {
@@ -67,7 +68,14 @@ test('neuerFreiEintrag: Freitext mit Menge und Einheit (Standard Stück)', () =>
     einheit: 'stk',
     anzahl: 3,
     erledigt: false,
+    zutat: null,
   });
+});
+test('neuerFreiEintrag: Zutat wird gemerkt', () => {
+  assert.equal(neuerFreiEintrag({ name: 'Möhren', anzahl: 2, zutat: 'Karotten' }, { id: 'f' }).zutat, 'Karotten');
+});
+test('neuerProduktEintrag: Zutat kommt aus dem Produkt', () => {
+  assert.equal(neuerProduktEintrag({ ...barilla, zutat: 'Spaghetti' }, 1, { id: 'x' }).zutat, 'Spaghetti');
 });
 test('neuerFreiEintrag: Fehler mit deutscher Meldung', () => {
   assert.throws(() => neuerFreiEintrag({ name: ' ', anzahl: 1 }), /Name/);
@@ -188,6 +196,7 @@ test('produktAusEintrag: liefert ein Produkt für den Vorrat', () => {
     art: 'menge',
     packung: 500,
     einheit: 'g',
+    zutat: null,
   });
 });
 test('einraeumen: nur Abgehakte, Menge = Packung mal Anzahl, bestehende werden erhöht', () => {
@@ -281,4 +290,17 @@ test('normalisiereListeneintrag: Fehler und fremde Felder', () => {
   assert.throws(() => normalisiereListeneintrag({ ...lf('X'), einheit: 'kg' }), /Einheit/);
   assert.throws(() => normalisiereListeneintrag({ ...ok, erledigt: 'ja' }), /Haken/);
   assert.equal('boese' in normalisiereListeneintrag({ ...ok, boese: 1 }), false);
+});
+
+// --- Zutat beim Scan ---
+test('findeTreffer: Freitext mit Zutat passt zu jedem Produkt dieser Zutat', () => {
+  const liste = [neuerFreiEintrag({ name: 'Spaghetti', anzahl: 400, einheit: 'g', zutat: 'Spaghetti' }, { id: 'f1' })];
+  assert.equal(findeTreffer(liste, barilla, produkte).id, 'f1'); // "Barilla Spaghetti" -> Zutat Spaghetti (geraten)
+  assert.equal(findeTreffer(liste, { ...barilla, zutat: 'Penne' }, produkte), null);
+  assert.equal(findeTreffer(liste, milch, produkte), null);
+});
+test('verbucheScan: Freitext in g wird mit der gekauften Menge verrechnet', () => {
+  const f = neuerFreiEintrag({ name: 'Spaghetti', anzahl: 400, einheit: 'g', zutat: 'Spaghetti' }, { id: 'f1' });
+  assert.deepEqual(verbucheScan(f, 500), { loeschen: 'f1' });
+  assert.equal(verbucheScan(f, 150).aendern.anzahl, 250);
 });

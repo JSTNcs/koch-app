@@ -23,7 +23,7 @@ export const ROUTES = [
     label: 'Was koche ich?',
     title: 'Was koche ich?',
     icon: '💡',
-    load: leer('Rezeptvorschläge kommen in Phase 3.'),
+    load: () => import('./screens/rezepte.js'),
   },
   {
     id: 'kochen',

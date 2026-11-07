@@ -1,0 +1,1702 @@
+{
+  "format": "koch-app-rezepte",
+  "version": 1,
+  "rezepte": [
+    {
+      "id": "start-spaghetti-tomatensauce",
+      "name": "Spaghetti mit Tomatensauce",
+      "portionen": 2,
+      "dauerMinuten": 25,
+      "zutaten": [
+        {
+          "zutat": "Spaghetti",
+          "art": "menge",
+          "menge": 200,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Dosentomaten",
+          "art": "menge",
+          "menge": 400,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Zwiebeln",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Knoblauch",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Olivenöl",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Parmesan",
+          "art": "menge",
+          "menge": 30,
+          "einheit": "g",
+          "optional": true
+        },
+        {
+          "zutat": "Basilikum",
+          "art": "da_leer",
+          "optional": true
+        }
+      ],
+      "schritte": [
+        "Zwiebel und Knoblauch fein hacken und in Olivenöl 3 Minuten glasig anbraten.",
+        "Die Tomaten dazugeben, mit Salz und Pfeffer würzen und 15 Minuten bei mittlerer Hitze köcheln lassen.",
+        "Die Spaghetti in reichlich Salzwasser nach Packungsanleitung bissfest kochen und abgießen.",
+        "Die Nudeln mit der Sauce mischen, mit Parmesan und Basilikum servieren."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-spaghetti-bolognese",
+      "name": "Spaghetti Bolognese",
+      "portionen": 2,
+      "dauerMinuten": 40,
+      "zutaten": [
+        {
+          "zutat": "Spaghetti",
+          "art": "menge",
+          "menge": 200,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Hackfleisch",
+          "art": "menge",
+          "menge": 250,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Dosentomaten",
+          "art": "menge",
+          "menge": 400,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Zwiebeln",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Karotten",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Knoblauch",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Tomatenmark",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Olivenöl",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Oregano",
+          "art": "da_leer",
+          "optional": true
+        },
+        {
+          "zutat": "Parmesan",
+          "art": "menge",
+          "menge": 30,
+          "einheit": "g",
+          "optional": true
+        }
+      ],
+      "schritte": [
+        "Zwiebel, Karotte und Knoblauch fein würfeln.",
+        "Das Hackfleisch in Öl krümelig und kräftig anbraten, das Gemüse 5 Minuten mitbraten.",
+        "Einen Esslöffel Tomatenmark kurz mitrösten, dann die Tomaten dazugeben. Mit Salz, Pfeffer und Oregano würzen.",
+        "Die Sauce 25 Minuten bei kleiner Hitze köcheln lassen, dabei gelegentlich umrühren.",
+        "Die Spaghetti in Salzwasser bissfest kochen, abgießen und mit der Sauce und etwas Parmesan servieren."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-nudeln-sahne-schinken",
+      "name": "Nudeln mit Sahnesauce und Schinken",
+      "portionen": 2,
+      "dauerMinuten": 20,
+      "zutaten": [
+        {
+          "zutat": "Nudeln",
+          "art": "menge",
+          "menge": 200,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Schinken",
+          "art": "menge",
+          "menge": 100,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Sahne",
+          "art": "menge",
+          "menge": 200,
+          "einheit": "ml"
+        },
+        {
+          "zutat": "Zwiebeln",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Erbsen",
+          "art": "menge",
+          "menge": 100,
+          "einheit": "g",
+          "optional": true
+        },
+        {
+          "zutat": "Öl",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Parmesan",
+          "art": "menge",
+          "menge": 30,
+          "einheit": "g",
+          "optional": true
+        }
+      ],
+      "schritte": [
+        "Die Nudeln in Salzwasser nach Packungsanleitung kochen.",
+        "Zwiebel würfeln und mit dem gewürfelten Schinken in Öl 4 Minuten anbraten.",
+        "Sahne und, wenn du magst, die Erbsen dazugeben und 5 Minuten leicht köcheln lassen. Mit Salz und Pfeffer abschmecken.",
+        "Die abgegossenen Nudeln unter die Sauce mischen und mit Parmesan servieren."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-penne-arrabbiata",
+      "name": "Penne all’Arrabbiata",
+      "portionen": 2,
+      "dauerMinuten": 20,
+      "zutaten": [
+        {
+          "zutat": "Penne",
+          "art": "menge",
+          "menge": 200,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Dosentomaten",
+          "art": "menge",
+          "menge": 400,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Knoblauch",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Chili",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Olivenöl",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Parmesan",
+          "art": "menge",
+          "menge": 30,
+          "einheit": "g",
+          "optional": true
+        }
+      ],
+      "schritte": [
+        "Den Knoblauch in dünne Scheiben schneiden und in Olivenöl bei kleiner Hitze goldgelb anbraten.",
+        "Chili nach Geschmack dazugeben, kurz mitbraten, dann die Tomaten hineingeben und mit Salz würzen.",
+        "Die Sauce 12 Minuten köcheln lassen.",
+        "Die Penne in Salzwasser bissfest kochen, abgießen, mit der scharfen Sauce mischen und mit Parmesan servieren."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-spaghetti-carbonara",
+      "name": "Spaghetti Carbonara",
+      "portionen": 2,
+      "dauerMinuten": 20,
+      "zutaten": [
+        {
+          "zutat": "Spaghetti",
+          "art": "menge",
+          "menge": 200,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Speck",
+          "art": "menge",
+          "menge": 100,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Eier",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Parmesan",
+          "art": "menge",
+          "menge": 50,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        }
+      ],
+      "schritte": [
+        "Die Spaghetti in Salzwasser bissfest kochen. Eine Tasse Nudelwasser aufheben, dann abgießen.",
+        "Den Speck in Würfeln in einer Pfanne ohne Fett knusprig braten.",
+        "Eier mit dem geriebenen Parmesan und reichlich Pfeffer verrühren.",
+        "Die heißen Nudeln zum Speck in die Pfanne geben, Pfanne vom Herd nehmen und die Eiermischung sofort unterrühren. Mit etwas Nudelwasser cremig machen."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-kaese-nudelauflauf",
+      "name": "Käse-Nudelauflauf",
+      "portionen": 2,
+      "dauerMinuten": 40,
+      "zutaten": [
+        {
+          "zutat": "Nudeln",
+          "art": "menge",
+          "menge": 250,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Sahne",
+          "art": "menge",
+          "menge": 200,
+          "einheit": "ml"
+        },
+        {
+          "zutat": "Käse",
+          "art": "menge",
+          "menge": 150,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Schinken",
+          "art": "menge",
+          "menge": 100,
+          "einheit": "g",
+          "optional": true
+        },
+        {
+          "zutat": "Zwiebeln",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Muskat",
+          "art": "da_leer"
+        }
+      ],
+      "schritte": [
+        "Den Backofen auf 200 °C Ober-/Unterhitze vorheizen.",
+        "Die Nudeln 3 Minuten kürzer als auf der Packung angegeben kochen und abgießen.",
+        "Sahne mit Salz, Pfeffer und Muskat würzen. Zwiebel würfeln, Schinken würfeln und den Käse reiben.",
+        "Nudeln, Zwiebel, Schinken und Sahne in eine Auflaufform geben, mit dem Käse bestreuen.",
+        "Etwa 20 Minuten backen, bis der Käse goldbraun ist."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-lasagne",
+      "name": "Lasagne",
+      "portionen": 2,
+      "dauerMinuten": 60,
+      "zutaten": [
+        {
+          "zutat": "Lasagneplatten",
+          "art": "menge",
+          "menge": 150,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Hackfleisch",
+          "art": "menge",
+          "menge": 300,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Passierte Tomaten",
+          "art": "menge",
+          "menge": 400,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Milch",
+          "art": "menge",
+          "menge": 400,
+          "einheit": "ml"
+        },
+        {
+          "zutat": "Butter",
+          "art": "menge",
+          "menge": 30,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Mehl",
+          "art": "menge",
+          "menge": 30,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Käse",
+          "art": "menge",
+          "menge": 100,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Zwiebeln",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Knoblauch",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Muskat",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Oregano",
+          "art": "da_leer",
+          "optional": true
+        }
+      ],
+      "schritte": [
+        "Zwiebel und Knoblauch würfeln, mit dem Hackfleisch kräftig anbraten. Die passierten Tomaten, Salz, Pfeffer und Oregano dazugeben und 15 Minuten köcheln lassen.",
+        "Für die Béchamel die Butter schmelzen, das Mehl einrühren und kurz anschwitzen. Nach und nach die Milch einrühren, bis die Sauce dicklich ist. Mit Salz, Pfeffer und Muskat würzen.",
+        "Den Backofen auf 180 °C Ober-/Unterhitze vorheizen.",
+        "In eine Form abwechselnd Hacksauce, Lasagneplatten und Béchamel schichten. Mit Béchamel abschließen und den geriebenen Käse darüberstreuen.",
+        "Etwa 35 Minuten backen, 5 Minuten ruhen lassen und servieren."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-gebratener-reis",
+      "name": "Gebratener Reis mit Ei und Gemüse",
+      "portionen": 2,
+      "dauerMinuten": 25,
+      "zutaten": [
+        {
+          "zutat": "Reis",
+          "art": "menge",
+          "menge": 150,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Eier",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Tiefkühlgemüse",
+          "art": "menge",
+          "menge": 200,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Zwiebeln",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Knoblauch",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Sojasauce",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Öl",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Frühlingszwiebeln",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk",
+          "optional": true
+        }
+      ],
+      "schritte": [
+        "Den Reis nach Packungsanleitung kochen und gut abtropfen lassen. Am besten schon etwas abkühlen lassen.",
+        "Zwiebel und Knoblauch fein hacken und in heißem Öl anbraten, das Gemüse dazugeben und 5 Minuten mitbraten.",
+        "Den Reis dazugeben und unter Rühren kräftig anbraten.",
+        "Die Mischung an den Rand schieben, die Eier in die Mitte schlagen und stocken lassen, dann alles vermengen.",
+        "Mit Sojasauce abschmecken und mit Frühlingszwiebeln bestreut servieren."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-haehnchen-curry",
+      "name": "Hähnchen-Curry mit Reis",
+      "portionen": 2,
+      "dauerMinuten": 35,
+      "zutaten": [
+        {
+          "zutat": "Hähnchenbrust",
+          "art": "menge",
+          "menge": 300,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Reis",
+          "art": "menge",
+          "menge": 150,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Kokosmilch",
+          "art": "menge",
+          "menge": 400,
+          "einheit": "ml"
+        },
+        {
+          "zutat": "Zwiebeln",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Knoblauch",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Paprika",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Currypulver",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Öl",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Ingwer",
+          "art": "menge",
+          "menge": 10,
+          "einheit": "g",
+          "optional": true
+        }
+      ],
+      "schritte": [
+        "Den Reis nach Packungsanleitung kochen.",
+        "Hähnchen in mundgerechte Stücke schneiden, Zwiebel, Knoblauch, Ingwer und Paprika klein schneiden.",
+        "Das Fleisch in Öl rundherum anbraten, Zwiebel, Knoblauch und Ingwer mitbraten. Zwei Teelöffel Currypulver kurz mitrösten.",
+        "Paprika und Kokosmilch dazugeben und 12 Minuten köcheln lassen, bis das Fleisch durchgegart ist. Mit Salz abschmecken.",
+        "Das Curry mit dem Reis servieren."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-haehnchen-reis-brokkoli",
+      "name": "Hähnchenbrust mit Reis und Brokkoli",
+      "portionen": 2,
+      "dauerMinuten": 30,
+      "zutaten": [
+        {
+          "zutat": "Hähnchenbrust",
+          "art": "menge",
+          "menge": 300,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Reis",
+          "art": "menge",
+          "menge": 150,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Brokkoli",
+          "art": "menge",
+          "menge": 300,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Öl",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Paprikapulver",
+          "art": "da_leer"
+        }
+      ],
+      "schritte": [
+        "Den Reis nach Packungsanleitung kochen.",
+        "Den Brokkoli in Röschen teilen und 5 Minuten in Salzwasser garen, dann abgießen.",
+        "Die Hähnchenbrust in Streifen schneiden, mit Salz, Pfeffer und Paprikapulver würzen und in Öl 6 bis 8 Minuten braten, bis sie durchgegart ist.",
+        "Alles zusammen anrichten."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-reispfanne-hack-paprika",
+      "name": "Reispfanne mit Hackfleisch und Paprika",
+      "portionen": 2,
+      "dauerMinuten": 30,
+      "zutaten": [
+        {
+          "zutat": "Reis",
+          "art": "menge",
+          "menge": 150,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Hackfleisch",
+          "art": "menge",
+          "menge": 250,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Paprika",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Zwiebeln",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Passierte Tomaten",
+          "art": "menge",
+          "menge": 200,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Öl",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Paprikapulver",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        }
+      ],
+      "schritte": [
+        "Den Reis nach Packungsanleitung kochen.",
+        "Zwiebel und Paprika würfeln. Das Hackfleisch in Öl krümelig anbraten, Zwiebel und Paprika 5 Minuten mitbraten.",
+        "Passierte Tomaten dazugeben, mit Paprikapulver, Salz und Pfeffer würzen und 8 Minuten köcheln lassen.",
+        "Den Reis unterheben und alles heiß servieren."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-kartoffelsuppe",
+      "name": "Kartoffelsuppe",
+      "portionen": 2,
+      "dauerMinuten": 35,
+      "zutaten": [
+        {
+          "zutat": "Kartoffeln",
+          "art": "menge",
+          "menge": 500,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Zwiebeln",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Karotten",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Brühe",
+          "art": "da_leer",
+          "notiz": "ca. 700 ml heiße Brühe"
+        },
+        {
+          "zutat": "Würstchen",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk",
+          "optional": true
+        },
+        {
+          "zutat": "Öl",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Petersilie",
+          "art": "da_leer",
+          "optional": true
+        }
+      ],
+      "schritte": [
+        "Kartoffeln und Karotten schälen und würfeln, die Zwiebel fein hacken.",
+        "Die Zwiebel in Öl glasig anbraten, Kartoffeln und Karotten kurz mitbraten.",
+        "Mit etwa 700 ml heißer Brühe aufgießen und 20 Minuten köcheln lassen, bis alles weich ist.",
+        "Einen Teil der Kartoffeln mit dem Stampfer zerdrücken, damit die Suppe sämig wird. Würstchenscheiben kurz miterhitzen und alles mit Salz, Pfeffer und Petersilie abschmecken."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-bratkartoffeln-spiegelei",
+      "name": "Bratkartoffeln mit Spiegelei",
+      "portionen": 2,
+      "dauerMinuten": 35,
+      "zutaten": [
+        {
+          "zutat": "Kartoffeln",
+          "art": "menge",
+          "menge": 600,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Zwiebeln",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Speck",
+          "art": "menge",
+          "menge": 60,
+          "einheit": "g",
+          "optional": true
+        },
+        {
+          "zutat": "Eier",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Öl",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Paprikapulver",
+          "art": "da_leer"
+        }
+      ],
+      "schritte": [
+        "Die Kartoffeln in Salzwasser etwa 15 Minuten vorkochen, abgießen, abkühlen lassen und in Scheiben schneiden.",
+        "In einer großen Pfanne Öl erhitzen und die Kartoffeln bei mittlerer Hitze 10 Minuten goldbraun braten, dabei nur selten wenden.",
+        "Zwiebel und Speck würfeln und die letzten 5 Minuten mitbraten. Mit Salz, Pfeffer und Paprikapulver würzen.",
+        "Die Eier in einer zweiten Pfanne als Spiegeleier braten und auf den Bratkartoffeln servieren."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-kartoffelpueree-wuerstchen",
+      "name": "Kartoffelpüree mit Würstchen",
+      "portionen": 2,
+      "dauerMinuten": 35,
+      "zutaten": [
+        {
+          "zutat": "Kartoffeln",
+          "art": "menge",
+          "menge": 600,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Milch",
+          "art": "menge",
+          "menge": 100,
+          "einheit": "ml"
+        },
+        {
+          "zutat": "Butter",
+          "art": "menge",
+          "menge": 30,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Würstchen",
+          "art": "menge",
+          "menge": 4,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Senf",
+          "art": "da_leer",
+          "optional": true
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Muskat",
+          "art": "da_leer"
+        }
+      ],
+      "schritte": [
+        "Kartoffeln schälen, in Stücke schneiden und in Salzwasser 20 Minuten weich kochen.",
+        "Abgießen, gut ausdampfen lassen und mit dem Stampfer zerdrücken.",
+        "Milch erwärmen und mit der Butter unterrühren, mit Salz und Muskat abschmecken.",
+        "Die Würstchen im heißen Wasser oder in der Pfanne erhitzen und mit dem Püree und Senf servieren."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-ruehrei-brot",
+      "name": "Rührei mit Brot",
+      "portionen": 2,
+      "dauerMinuten": 10,
+      "zutaten": [
+        {
+          "zutat": "Eier",
+          "art": "menge",
+          "menge": 4,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Butter",
+          "art": "menge",
+          "menge": 10,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Brot",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Milch",
+          "art": "menge",
+          "menge": 40,
+          "einheit": "ml",
+          "optional": true
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        }
+      ],
+      "schritte": [
+        "Die Eier mit Salz, Pfeffer und, wenn du magst, einem Schuss Milch verquirlen.",
+        "Die Butter in einer Pfanne bei mittlerer Hitze schmelzen.",
+        "Die Eiermasse hineingeben und unter vorsichtigem Rühren stocken lassen, bis sie cremig und nicht mehr flüssig ist.",
+        "Mit dem Brot servieren."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-omelett-kaese-schinken",
+      "name": "Omelett mit Käse und Schinken",
+      "portionen": 2,
+      "dauerMinuten": 15,
+      "zutaten": [
+        {
+          "zutat": "Eier",
+          "art": "menge",
+          "menge": 4,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Käse",
+          "art": "menge",
+          "menge": 60,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Schinken",
+          "art": "menge",
+          "menge": 60,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Butter",
+          "art": "menge",
+          "menge": 10,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        }
+      ],
+      "schritte": [
+        "Eier mit Salz und Pfeffer verquirlen. Käse reiben und den Schinken in Streifen schneiden.",
+        "Die Butter in einer Pfanne erhitzen und die Eier hineingießen.",
+        "Bei kleiner Hitze stocken lassen, dann Käse und Schinken auf eine Hälfte geben.",
+        "Das Omelett zusammenklappen und noch 1 Minute ziehen lassen."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-gemuesepfanne-ei",
+      "name": "Gemüsepfanne mit Ei",
+      "portionen": 2,
+      "dauerMinuten": 20,
+      "zutaten": [
+        {
+          "zutat": "Zucchini",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Paprika",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Zwiebeln",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Eier",
+          "art": "menge",
+          "menge": 3,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Öl",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Feta",
+          "art": "menge",
+          "menge": 50,
+          "einheit": "g",
+          "optional": true
+        }
+      ],
+      "schritte": [
+        "Zucchini, Paprika und Zwiebel in Stücke schneiden.",
+        "In einer Pfanne in heißem Öl 8 bis 10 Minuten anbraten, mit Salz und Pfeffer würzen.",
+        "Die Eier verquirlen, über das Gemüse gießen und bei kleiner Hitze stocken lassen.",
+        "Wenn du magst, den zerbröckelten Feta darüberstreuen und servieren."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-linsensuppe",
+      "name": "Linsensuppe",
+      "portionen": 2,
+      "dauerMinuten": 40,
+      "zutaten": [
+        {
+          "zutat": "Linsen",
+          "art": "menge",
+          "menge": 200,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Karotten",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Zwiebeln",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Kartoffeln",
+          "art": "menge",
+          "menge": 200,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Brühe",
+          "art": "da_leer",
+          "notiz": "ca. 800 ml heiße Brühe"
+        },
+        {
+          "zutat": "Würstchen",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk",
+          "optional": true
+        },
+        {
+          "zutat": "Essig",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Lorbeer",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Öl",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        }
+      ],
+      "schritte": [
+        "Zwiebel, Karotten und Kartoffeln klein würfeln.",
+        "Das Gemüse in Öl kurz anbraten, dann die Linsen, ein Lorbeerblatt und etwa 800 ml heiße Brühe dazugeben.",
+        "Zugedeckt 25 bis 30 Minuten köcheln lassen, bis die Linsen weich sind.",
+        "Das Lorbeerblatt entfernen, Würstchenscheiben kurz miterhitzen und mit Salz, Pfeffer und einem Schuss Essig abschmecken."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-chili-con-carne",
+      "name": "Chili con Carne",
+      "portionen": 2,
+      "dauerMinuten": 45,
+      "zutaten": [
+        {
+          "zutat": "Hackfleisch",
+          "art": "menge",
+          "menge": 300,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Kidneybohnen",
+          "art": "menge",
+          "menge": 250,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Mais",
+          "art": "menge",
+          "menge": 150,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Dosentomaten",
+          "art": "menge",
+          "menge": 400,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Zwiebeln",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Knoblauch",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Paprika",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Chili",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Paprikapulver",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Öl",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Kreuzkümmel",
+          "art": "da_leer",
+          "optional": true
+        },
+        {
+          "zutat": "Reis",
+          "art": "menge",
+          "menge": 150,
+          "einheit": "g",
+          "optional": true
+        }
+      ],
+      "schritte": [
+        "Zwiebel, Knoblauch und Paprika klein schneiden. Bohnen und Mais abtropfen lassen.",
+        "Das Hackfleisch in Öl kräftig anbraten, Zwiebel, Knoblauch und Paprika mitbraten.",
+        "Mit Paprikapulver, Chili, Kreuzkümmel und Salz würzen, die Tomaten, Bohnen und den Mais dazugeben.",
+        "Zugedeckt 25 Minuten köcheln lassen, bis es schön dick ist. Wenn du magst, mit Reis servieren."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-nudelsalat-thunfisch",
+      "name": "Nudelsalat mit Thunfisch und Mais",
+      "portionen": 2,
+      "dauerMinuten": 25,
+      "zutaten": [
+        {
+          "zutat": "Nudeln",
+          "art": "menge",
+          "menge": 200,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Thunfisch",
+          "art": "menge",
+          "menge": 150,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Mais",
+          "art": "menge",
+          "menge": 100,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Gurke",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Joghurt",
+          "art": "menge",
+          "menge": 100,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Mayonnaise",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Essig",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Zwiebeln",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk",
+          "optional": true
+        }
+      ],
+      "schritte": [
+        "Die Nudeln in Salzwasser kochen, abgießen, kalt abspülen und abkühlen lassen.",
+        "Thunfisch und Mais abtropfen lassen, die Gurke würfeln, die Zwiebel fein hacken.",
+        "Joghurt mit zwei Esslöffeln Mayonnaise, Essig, Salz und Pfeffer zu einem Dressing verrühren.",
+        "Alles vermengen und vor dem Essen 15 Minuten durchziehen lassen."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-lachs-kartoffeln-spinat",
+      "name": "Lachs mit Kartoffeln und Spinat",
+      "portionen": 2,
+      "dauerMinuten": 30,
+      "zutaten": [
+        {
+          "zutat": "Lachs",
+          "art": "menge",
+          "menge": 250,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Kartoffeln",
+          "art": "menge",
+          "menge": 500,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Spinat",
+          "art": "menge",
+          "menge": 300,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Butter",
+          "art": "menge",
+          "menge": 20,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Zitrone",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk",
+          "optional": true
+        },
+        {
+          "zutat": "Sahne",
+          "art": "menge",
+          "menge": 50,
+          "einheit": "ml",
+          "optional": true
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Muskat",
+          "art": "da_leer"
+        }
+      ],
+      "schritte": [
+        "Die Kartoffeln schälen und in Salzwasser etwa 20 Minuten garen.",
+        "Den Lachs mit Salz und Pfeffer würzen und in der Hälfte der Butter 3 bis 4 Minuten pro Seite braten, bis er durchgegart ist.",
+        "Den Spinat in der übrigen Butter zusammenfallen lassen, mit Salz, Pfeffer und Muskat würzen, optional einen Schuss Sahne unterrühren.",
+        "Mit Kartoffeln und einem Spritzer Zitronensaft anrichten."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-fischstaebchen-pueree-erbsen",
+      "name": "Fischstäbchen mit Kartoffelpüree und Erbsen",
+      "portionen": 2,
+      "dauerMinuten": 30,
+      "zutaten": [
+        {
+          "zutat": "Fischstäbchen",
+          "art": "menge",
+          "menge": 8,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Kartoffeln",
+          "art": "menge",
+          "menge": 500,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Erbsen",
+          "art": "menge",
+          "menge": 150,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Milch",
+          "art": "menge",
+          "menge": 100,
+          "einheit": "ml"
+        },
+        {
+          "zutat": "Butter",
+          "art": "menge",
+          "menge": 30,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Öl",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Muskat",
+          "art": "da_leer"
+        }
+      ],
+      "schritte": [
+        "Die Kartoffeln schälen, in Stücke schneiden und in Salzwasser 20 Minuten weich kochen.",
+        "Die Fischstäbchen nach Packungsanleitung in Öl in der Pfanne braten.",
+        "Die Erbsen 4 Minuten in Salzwasser garen und abgießen.",
+        "Die Kartoffeln mit warmer Milch und Butter zerstampfen und mit Salz und Muskat abschmecken. Alles zusammen anrichten."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-pizza-wraps",
+      "name": "Pizza-Wraps",
+      "portionen": 2,
+      "dauerMinuten": 20,
+      "zutaten": [
+        {
+          "zutat": "Wraps",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Passierte Tomaten",
+          "art": "menge",
+          "menge": 100,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Mozzarella",
+          "art": "menge",
+          "menge": 125,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Schinken",
+          "art": "menge",
+          "menge": 60,
+          "einheit": "g",
+          "optional": true
+        },
+        {
+          "zutat": "Champignons",
+          "art": "menge",
+          "menge": 100,
+          "einheit": "g",
+          "optional": true
+        },
+        {
+          "zutat": "Oregano",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        }
+      ],
+      "schritte": [
+        "Den Backofen auf 200 °C Ober-/Unterhitze vorheizen und ein Backblech mit Backpapier auslegen.",
+        "Die passierten Tomaten mit Salz und Oregano würzen und auf die Wraps streichen.",
+        "Mit Mozzarella, Schinken und Champignonscheiben belegen.",
+        "Etwa 10 Minuten backen, bis der Käse geschmolzen ist."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-ofenkartoffeln-quark",
+      "name": "Ofenkartoffeln mit Quark",
+      "portionen": 2,
+      "dauerMinuten": 45,
+      "zutaten": [
+        {
+          "zutat": "Kartoffeln",
+          "art": "menge",
+          "menge": 700,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Quark",
+          "art": "menge",
+          "menge": 250,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Frühlingszwiebeln",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk",
+          "optional": true
+        },
+        {
+          "zutat": "Schinken",
+          "art": "menge",
+          "menge": 60,
+          "einheit": "g",
+          "optional": true
+        },
+        {
+          "zutat": "Öl",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Paprikapulver",
+          "art": "da_leer"
+        }
+      ],
+      "schritte": [
+        "Den Backofen auf 200 °C Ober-/Unterhitze vorheizen. Die Kartoffeln gut waschen und halbieren.",
+        "Mit Öl, Salz und Paprikapulver mischen und auf einem Blech 30 bis 35 Minuten backen, bis sie weich und goldbraun sind.",
+        "Den Quark mit Salz und Pfeffer verrühren, Frühlingszwiebelringe und Schinkenwürfel unterheben.",
+        "Die Kartoffeln mit dem Quark servieren."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-haehnchen-gemuese-pfanne",
+      "name": "Hähnchen-Gemüse-Pfanne",
+      "portionen": 2,
+      "dauerMinuten": 30,
+      "zutaten": [
+        {
+          "zutat": "Hähnchenbrust",
+          "art": "menge",
+          "menge": 300,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Paprika",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Zucchini",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Zwiebeln",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Sojasauce",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Öl",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Reis",
+          "art": "menge",
+          "menge": 150,
+          "einheit": "g",
+          "optional": true
+        }
+      ],
+      "schritte": [
+        "Wenn du Reis dazu essen willst, ihn nach Packungsanleitung kochen.",
+        "Hähnchen in Streifen schneiden und in heißem Öl 6 bis 8 Minuten braten, bis es durchgegart ist. Herausnehmen.",
+        "Zwiebel, Paprika und Zucchini in Stücke schneiden und im selben Öl 6 Minuten braten.",
+        "Das Fleisch zurück in die Pfanne geben, mit Sojasauce und Pfeffer abschmecken und heiß servieren."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-tomatensuppe",
+      "name": "Tomatensuppe mit Brot",
+      "portionen": 2,
+      "dauerMinuten": 25,
+      "zutaten": [
+        {
+          "zutat": "Dosentomaten",
+          "art": "menge",
+          "menge": 400,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Zwiebeln",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Knoblauch",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Sahne",
+          "art": "menge",
+          "menge": 100,
+          "einheit": "ml"
+        },
+        {
+          "zutat": "Brühe",
+          "art": "da_leer",
+          "notiz": "ca. 300 ml heiße Brühe"
+        },
+        {
+          "zutat": "Öl",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Pfeffer",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Basilikum",
+          "art": "da_leer",
+          "optional": true
+        },
+        {
+          "zutat": "Brot",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk",
+          "optional": true
+        }
+      ],
+      "schritte": [
+        "Zwiebel und Knoblauch fein hacken und in Öl glasig anbraten.",
+        "Die Tomaten und etwa 300 ml heiße Brühe dazugeben und 15 Minuten köcheln lassen.",
+        "Mit dem Stabmixer pürieren, die Sahne einrühren und mit Salz, Pfeffer und Basilikum abschmecken.",
+        "Mit Brot servieren."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-porridge-banane",
+      "name": "Porridge mit Banane",
+      "portionen": 2,
+      "dauerMinuten": 10,
+      "zutaten": [
+        {
+          "zutat": "Haferflocken",
+          "art": "menge",
+          "menge": 80,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Milch",
+          "art": "menge",
+          "menge": 300,
+          "einheit": "ml"
+        },
+        {
+          "zutat": "Bananen",
+          "art": "menge",
+          "menge": 1,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Honig",
+          "art": "menge",
+          "menge": 10,
+          "einheit": "g",
+          "optional": true
+        },
+        {
+          "zutat": "Zimt",
+          "art": "da_leer",
+          "optional": true
+        }
+      ],
+      "schritte": [
+        "Haferflocken und Milch in einem Topf unter Rühren aufkochen.",
+        "Bei kleiner Hitze 3 bis 5 Minuten quellen lassen, bis der Brei cremig ist.",
+        "Die Banane in Scheiben schneiden und auf dem Porridge verteilen. Mit Honig und Zimt verfeinern."
+      ],
+      "quelle": "Startpaket"
+    },
+    {
+      "id": "start-pfannkuchen",
+      "name": "Pfannkuchen",
+      "portionen": 2,
+      "dauerMinuten": 20,
+      "zutaten": [
+        {
+          "zutat": "Mehl",
+          "art": "menge",
+          "menge": 150,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Milch",
+          "art": "menge",
+          "menge": 300,
+          "einheit": "ml"
+        },
+        {
+          "zutat": "Eier",
+          "art": "menge",
+          "menge": 2,
+          "einheit": "stk"
+        },
+        {
+          "zutat": "Butter",
+          "art": "menge",
+          "menge": 20,
+          "einheit": "g"
+        },
+        {
+          "zutat": "Salz",
+          "art": "da_leer"
+        },
+        {
+          "zutat": "Zucker",
+          "art": "menge",
+          "menge": 10,
+          "einheit": "g",
+          "optional": true
+        }
+      ],
+      "schritte": [
+        "Mehl, Milch, Eier und eine Prise Salz zu einem glatten, flüssigen Teig verrühren und 10 Minuten quellen lassen.",
+        "Etwas Butter in einer Pfanne erhitzen und eine Kelle Teig hineingeben, dünn verteilen.",
+        "Bei mittlerer Hitze 2 Minuten backen, wenden und die zweite Seite goldbraun backen.",
+        "Mit Zucker bestreut oder nach Belieben belegt servieren."
+      ],
+      "quelle": "Startpaket"
+    }
+  ]
+}
