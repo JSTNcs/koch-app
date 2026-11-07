@@ -4,6 +4,7 @@ import { alle, schreibeAlles } from '../db.js';
 import { baueIndex, pruefeRezept, gruppiereVorschlaege, fehlendFuerListe, mengeText } from '../rezepte.js';
 import { fuegeHinzu } from '../einkauf.js';
 import { formatMenge } from '../pantry.js';
+import { beginneKochen } from '../kochstand.js';
 import { holeStartpaketText, planeImportAusText, fuehreImportAus } from '../rezeptspeicher.js';
 
 export async function render(container) {
@@ -147,6 +148,7 @@ export async function render(container) {
       p.kategorie === 'alles'
         ? h('p', { class: 'hinweis' }, '✔ Alles da, du kannst es kochen.')
         : h('p', { class: 'hinweis warnung' }, `Es fehlen ${p.fehlend} ${p.fehlend === 1 ? 'Zutat' : 'Zutaten'}.`),
+      h('button', { class: 'voll gross', style: 'margin:8px 0', onclick: () => beginneKochen(rezept, portionen).catch(zeigeFehler) }, '🍳 Kochen'),
       h('h2', {}, 'Zutaten'),
       h('ul', { class: 'zutatenliste' }, p.zutaten.map(zeile)),
       p.fehlend > 0

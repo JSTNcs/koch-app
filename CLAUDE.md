@@ -37,7 +37,9 @@ Der Nutzer hat keine Programmiererfahrung: Antworten auf Deutsch, einfach erklä
   Produkte, Vorratseinträge und Listeneinträge haben ein Feld **Zutat** (Vorschlag der App aus dem Namen, vom Nutzer korrigierbar).
   So findet "Spaghetti" im Rezept jede Marke im Vorrat. Gewürze, Öl, Salz: nur da/leer, ohne Eintrag im Vorrat gelten sie als vorhanden.
 - **Mahlzeit:** Datum, Rezept oder Produkt, gegessene Menge/Portion, Nährwerte
-- **Rest:** Rezept, Portionen übrig, gekocht am
+- **Rest:** Rezept, Portionen übrig, gekocht am (Tabelle `reste`, im Vorrat-Tab als Bereich "Reste")
+- **Kochprotokoll:** Datum, Rezept, Portionen gesamt/gegessen, Rest, Vorratseinträge vor dem Abzug (Tabelle `gekocht`, für "Rückgängig";
+  Phase 5 macht aus den gegessenen Portionen Tagebuch-Einträge)
 - **Einstellungen:** Körperdaten für das Tagesziel, Tagesziel, letzte Sicherung
 
 ## Mengen-Regel (entschieden)

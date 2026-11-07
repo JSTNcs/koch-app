@@ -54,6 +54,15 @@ export function neuerEintrag(eingabe, { id = crypto.randomUUID() } = {}) {
   return { id, name, art: 'menge', menge: eingabe.menge, einheit: eingabe.einheit, da: null, ablauf, barcode, zutat };
 }
 
+// Für gespeicherte Einträge (z. B. aus einer Sicherung): prüft alles und baut einen sauberen Eintrag.
+export function normalisiereEintrag(roh) {
+  if (!roh || typeof roh !== 'object' || Array.isArray(roh)) throw new Error('Der Eintrag ist ungültig.');
+  if (typeof roh.id !== 'string' || !roh.id) throw new Error('Die Kennung (id) fehlt.');
+  const e = neuerEintrag(roh, { id: roh.id });
+  if (e.art === 'da_leer' && typeof roh.da === 'boolean') e.da = roh.da;
+  return e;
+}
+
 // Schrittgröße für die Plus/Minus-Knöpfe
 export function schritt(einheit) {
   return einheit === 'stk' ? 1 : 50;

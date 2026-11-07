@@ -1,5 +1,6 @@
 import { h } from '../dom.js';
-import { alle, speichere, loesche, datenSchuetzen } from '../db.js';
+import { alle, speichere, loesche, datenSchuetzen, schreibeAlles } from '../db.js';
+import { esseRestPortion, restAlterText } from '../kochen.js';
 import { ladeHinweis } from '../sicherung.js';
 import { schlageZutatVor, zutatVonEintrag, findeZutat } from '../zutaten.js';
 import { zutatenDatalist, ZUTATEN_LISTE_ID } from '../zutaten-ui.js';
@@ -19,10 +20,12 @@ export async function render(container) {
 
   let sicherungsHinweis = null;
   let produkteListe = [];
+  let reste = [];
 
   async function laden() {
     liste = sortiere(await alle('vorrat'));
     produkteListe = await alle('produkte');
+    reste = (await alle('reste')).sort((a, b) => b.gekochtAm.localeCompare(a.gekochtAm));
     sicherungsHinweis = await ladeHinweis();
   }
 
@@ -52,8 +55,39 @@ export async function render(container) {
           h('button', { class: 'zweit voll', onclick: () => (location.hash = '#/einstellungen') }, 'Jetzt sichern')
         )
       : null;
-    const teile = [kopf, erinnerung, fehler ? h('p', { class: 'hinweis fehler' }, fehler) : null, inhalt].filter(Boolean);
+    const resteBlock = reste.length ? [h('h2', {}, '🍲 Reste'), h('ul', { class: 'liste' }, reste.map(restKarte)), h('h2', {}, 'Vorrat')] : null;
+    const teile = [kopf, erinnerung, fehler ? h('p', { class: 'hinweis fehler' }, fehler) : null, resteBlock, inhalt].flat().filter(Boolean);
     container.replaceChildren(...teile);
+  }
+
+  // Reste vom Kochen: eine Portion gegessen oder ganz entfernen
+  function restKarte(r) {
+    return h(
+      'li',
+      { class: 'eintrag' },
+      h('div', { class: 'kopf' }, h('span', { class: 'name' }, r.name), h('span', { class: 'menge' }, `${r.portionen} ${r.portionen === 1 ? 'Portion' : 'Portionen'}`)),
+      h('div', { class: 'menge' }, restAlterText(r)),
+      h(
+        'div',
+        { class: 'knoepfe' },
+        h('button', { class: 'zweit', onclick: () => esseRest(r) }, '1 Portion gegessen'),
+        h('button', { class: 'gefahr', onclick: () => entferneRest(r) }, 'Entfernen')
+      )
+    );
+  }
+
+  async function esseRest(r) {
+    const x = esseRestPortion(r);
+    await schreibeAlles(x.loeschen ? { reste: { loesche: [x.loeschen] } } : { reste: { put: [x.rest] } });
+    await laden();
+    zeigeListe();
+  }
+
+  async function entferneRest(r) {
+    if (!confirm(`„${r.name}“ (Rest) wirklich entfernen?`)) return;
+    await schreibeAlles({ reste: { loesche: [r.id] } });
+    await laden();
+    zeigeListe();
   }
 
   function eintragKarte(e) {

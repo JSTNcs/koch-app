@@ -5,6 +5,7 @@ import { neuerEintrag, setzeDa } from '../js/pantry.js';
 import { neuesProdukt } from '../js/produkt.js';
 import { neuerProduktEintrag, neuerFreiEintrag, schalteHaken } from '../js/einkauf.js';
 import { neuesRezept } from '../js/rezepte.js';
+import { neuerRest, neuesProtokoll } from '../js/kochen.js';
 
 const JETZT = new Date('2026-11-06T12:00:00.000Z');
 const tageZurueck = (n, extraMs = 0) => new Date(JETZT.getTime() - n * 86400000 - extraMs).toISOString();
@@ -207,4 +208,50 @@ test('Zutat im Vorratseintrag und im Produkt überlebt die Sicherung', () => {
   const r = pruefeSicherung(JSON.stringify(erzeugeSicherung({ vorrat: [e], produkte: [p], einstellungen: [] }, JETZT)));
   assert.equal(r.vorrat[0].zutat, 'Spaghetti');
   assert.equal(r.produkte[0].zutat, 'Spaghetti');
+});
+
+// --- Reste und Kochprotokoll in der Sicherung ---
+const rest1 = neuerRest({ rezeptId: 'r1', name: 'Chili', portionen: 2, jetzt: JETZT }, { id: 'rest1' });
+const protokoll1 = neuesProtokoll(
+  { rezept: rezept1, portionen: 2, gesamt: 3, gegessen: 1, rest: rest1, wirkung: { vorratPut: [], vorratLoesche: [], vorher: [nudeln, salz] }, jetzt: JETZT, zusammenfassung: ['Nudeln: 200 g'] },
+  { id: 'prot1' }
+);
+
+test('Reste und Kochprotokoll: kommen in die Sicherung und wieder heraus', () => {
+  const s = erzeugeSicherung({ ...daten(), reste: [rest1], gekocht: [protokoll1] }, JETZT);
+  assert.equal(s.daten.reste.length, 1);
+  assert.equal(s.daten.gekocht.length, 1);
+  const r = pruefeSicherung(JSON.stringify(s));
+  assert.deepEqual(r.reste, [rest1]);
+  assert.deepEqual(r.gekocht, [protokoll1]);
+  assert.equal(r.gekocht[0].vorher[1].da, false);
+});
+test('Reste und Kochprotokoll: alte Sicherungen ohne beides bleiben lesbar', () => {
+  const alt = gueltig();
+  delete alt.daten.reste;
+  delete alt.daten.gekocht;
+  const r = pruefeSicherung(JSON.stringify(alt));
+  assert.deepEqual(r.reste, []);
+  assert.deepEqual(r.gekocht, []);
+  assert.deepEqual(erzeugeSicherung(daten(), JETZT).daten.reste, []);
+  assert.deepEqual(erzeugeSicherung(daten(), JETZT).daten.gekocht, []);
+});
+test('Reste und Kochprotokoll: Fehler mit Nummer, doppelte Kennungen, kaputte Listen', () => {
+  const basis = () => JSON.parse(JSON.stringify(erzeugeSicherung({ ...daten(), reste: [rest1, { ...rest1, id: 'rest2' }], gekocht: [protokoll1, { ...protokoll1, id: 'prot2' }] }, JETZT)));
+  const a = basis(); a.daten.reste[1].portionen = 0;
+  assert.throws(() => pruefeSicherung(JSON.stringify(a)), /Rest 2.*Portionen/);
+  const b = basis(); b.daten.reste[1].id = 'rest1';
+  assert.throws(() => pruefeSicherung(JSON.stringify(b)), /Reste.*doppelt/);
+  const c = basis(); c.daten.gekocht[1].gesamt = 0;
+  assert.throws(() => pruefeSicherung(JSON.stringify(c)), /Kochprotokoll 2.*Portionen/);
+  const d = basis(); d.daten.gekocht[1].id = 'prot1';
+  assert.throws(() => pruefeSicherung(JSON.stringify(d)), /Kochprotokoll.*doppelt/);
+  const e = basis(); e.daten.reste = 'x';
+  assert.throws(() => pruefeSicherung(JSON.stringify(e)), /Reste/);
+  const f = basis(); f.daten.gekocht = 'x';
+  assert.throws(() => pruefeSicherung(JSON.stringify(f)), /Kochprotokoll/);
+});
+test('Der laufende Kochvorgang gehört nicht in die Sicherung', () => {
+  const s = erzeugeSicherung({ ...daten(), einstellungen: [{ key: 'kochen', value: { schritt: 2 } }, { key: 'irgendwas', value: 1 }] }, JETZT);
+  assert.deepEqual(s.daten.einstellungen, [{ key: 'irgendwas', value: 1 }]);
 });

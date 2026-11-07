@@ -1,7 +1,7 @@
 # Stand
 
-**Phase 1, 2 und 3 (Rezepte, „Was koche ich?") sind abgeschlossen und am iPhone getestet** (Version v7).
-Nächste Phase: 4 (Kochen-Modus mit Abziehen und Resten). Vorher Plan zeigen und OK abwarten.
+**Phase 1, 2 und 3 sind abgeschlossen und am iPhone getestet. Phase 4 (Kochen-Modus mit Abziehen und Resten) ist gebaut und
+online (Version v8), der Test am echten iPhone steht noch aus.** Danach: Phase 5 (Tagebuch und Tagesziel). Vorher Plan zeigen und OK abwarten.
 
 ## Wo läuft was
 - App im Netz: https://jstncs.github.io/koch-app/ (GitHub Pages, Zweig `main`, Ordner `/`)
@@ -9,7 +9,7 @@ Nächste Phase: 4 (Kochen-Modus mit Abziehen und Resten). Vorher Plan zeigen und
 - Commits laufen unter JSTNcs mit der GitHub-„noreply"-Adresse, nicht mit der privaten E-Mail.
 
 ## Was die App kann
-- 6 Bildschirme mit unterer Navigation. Gebaut: Vorrat, Einkauf, Was koche ich?, Mehr (Einstellungen). Rest: Platzhalter (Kochen, Tagebuch).
+- 6 Bildschirme mit unterer Navigation. Gebaut: Vorrat, Einkauf, Was koche ich?, Kochen, Mehr (Einstellungen). Platzhalter: Tagebuch.
 - Installierbar auf dem Home-Bildschirm, läuft offline (Service Worker `sw.js`).
 - **Vorrat:** anlegen, Menge ändern, löschen. Art `menge` (g, ml, Stück) oder `da_leer` (Gewürze). Feld „Zutat für Rezepte".
 - **Scan:** Kamera liest Barcode, Open Food Facts liefert Name, Größe, Nährwerte (nur der Barcode geht raus). Unbekanntes Produkt von
@@ -25,10 +25,22 @@ Nächste Phase: 4 (Kochen-Modus mit Abziehen und Resten). Vorher Plan zeigen und
   - Abgleich über das Feld **Zutat**: Eintrag-Zutat, sonst Produkt-Zutat, sonst gleichwertiges Produkt, sonst Vermutung aus dem Namen.
     Gleiche Einheit wird addiert und verglichen; andere Einheit (Rezept „1 Zwiebel", Vorrat „1 kg") gilt als „unklar" (nicht fehlend).
     Gewürze/Öl/Salz ohne Eintrag im Vorrat gelten als vorhanden (nur „leer" zählt als fehlend).
+- **Kochen (Phase 4):**
+  - Start über „🍳 Kochen" in der Rezeptansicht (Was koche ich?) oder im Tab Kochen (Rezept wählen, Portionen). Auch mit fehlenden Zutaten, mit Hinweis.
+  - Ablauf: Zutaten bereitlegen (abhaken) → Schritte (ein Schritt pro Bildschirm, große Schrift, Bildschirm bleibt an per Wake Lock) →
+    Portionen (insgesamt entstanden, gegessen, Rest) → Vorrat anpassen → Ergebnis mit „↩ Rückgängig".
+  - Der Kochstand wird laufend gespeichert (`einstellungen`, Schlüssel `kochen`, nicht in der Sicherung): Nach einem Wechsel in eine andere
+    App oder einem Tabwechsel geht es genau da weiter. „Kochen abbrechen" lässt den Vorrat unverändert.
+  - Abzug (`js/kochen.js`, `planeAbzug`): Zutat über das Feld Zutat; bald ablaufende Einträge zuerst, bei gleichem Datum die kleinere Menge,
+    ohne Datum zuletzt; leer gewordene Einträge werden entfernt; nie unter 0 (Hinweis „Es waren nur … da"); Mengen änderbar; Vorrat in anderer
+    Einheit (Rezept „1 Zwiebel", Vorrat „1 kg"): Menge selbst eintragen oder überspringen; freiwillige Zutaten nur auf Wunsch;
+    Gewürze/Öl/Salz werden nicht abgezogen, man kann sie auf „leer" setzen. Alles wird in EINER Transaktion gespeichert.
+  - Reste: Tabelle `reste`, im Vorrat-Tab oben unter „🍲 Reste" mit Portionen und „heute/gestern/vor N Tagen gekocht", „1 Portion gegessen", „Entfernen".
+  - Kochprotokoll: Tabelle `gekocht` (merkt den Vorrat vor dem Abzug, daher „Rückgängig"; Phase 5 nutzt die gegessenen Portionen).
 - **Rezepte verwalten** (Mehr > „📖 Rezepte verwalten"): eintippen und ändern (Zutatenvorschläge, Einheit passend zur Zutat), löschen,
   **Startpaket** (28 Alltagsrezepte für 2 Portionen, gemischt mit Fleisch und Fisch, eigene Texte, `daten/startpaket.json`),
   **Rezeptdatei** einlesen (Rückfrage: was ist neu, was wird ersetzt; gleiche Kennung ersetzt).
-- **Sicherung** (Mehr): Vorrat, Produkte, Einkaufsliste, Rezepte; Export per Teilen-Menü oder Download, Import mit Prüfung und Rückfrage
+- **Sicherung** (Mehr): Vorrat, Produkte, Einkaufsliste, Rezepte, Reste, Kochprotokoll; Export per Teilen-Menü oder Download, Import mit Prüfung und Rückfrage
   (ersetzt alles), Erinnerung nach über 7 Tagen. Ältere Sicherungen bleiben einlesbar.
 
 ## Rezepte am PC importieren
@@ -42,20 +54,20 @@ Nächste Phase: 4 (Kochen-Modus mit Abziehen und Resten). Vorher Plan zeigen und
 - Kein Build-Schritt. `index.html` lädt `js/app.js`; Bildschirme in `js/screens/`, Routen in `js/routes.js`.
 - Reine Logik (gut testbar): `js/pantry.js` (Vorrat), `js/produkt.js` (Produkte, Open-Food-Facts-Antwort, Gruppen), `js/einkauf.js`
   (Liste, Zuordnung beim Scan), `js/zutaten.js` (Zutatenliste mit 99 Zutaten, Vorschlag), `js/rezepte.js` (Rezepte, Abgleich, Dateiformat),
-  `js/barcode.js`, `js/backup.js`.
-- Mit Browser verbunden: `js/db.js` (IndexedDB Version 3: `vorrat`, `produkte`, `einkauf`, `rezepte`, `einstellungen`; `schreibeAlles` schreibt
-  mehrere Tabellen in einem Rutsch), `js/off.js`, `js/scanner.js`, `js/sicherung.js`, `js/rezeptspeicher.js`, `js/zutaten-ui.js`.
+  `js/kochen.js` (Abzug, Reste, Protokoll, Rückgängig), `js/barcode.js`, `js/backup.js`.
+- Mit Browser verbunden: `js/db.js` (IndexedDB Version 4: `vorrat`, `produkte`, `einkauf`, `rezepte`, `reste`, `gekocht`, `einstellungen`; `schreibeAlles` schreibt
+  mehrere Tabellen in einem Rutsch), `js/off.js`, `js/scanner.js`, `js/sicherung.js`, `js/rezeptspeicher.js`, `js/zutaten-ui.js`, `js/kochstand.js` (laufender Kochvorgang), `js/wachhalten.js`.
 - Scan-Ablauf `js/screens/scan.js` hat drei Betriebsarten: `vorrat`, `liste`, `einkaufen`.
 - PC-Werkzeuge in `tools/`: `rezeptimport.mjs`, `rezept-aus-link.mjs`, `baue-startpaket.mjs` (Quelle des Startpakets: danach
   `node tools/baue-startpaket.mjs` ausführen), `make-icons.mjs`, Browser-Tests.
 - Bibliotheken lokal in `lib/` (MIT und Apache-2.0, siehe `lib/README.md`).
 
 ## Tests
-- `npm test`: 184 Logik-Tests im Ordner `tests/` (Node, keine Installation nötig).
+- `npm test`: 213 Logik-Tests im Ordner `tests/` (Node, keine Installation nötig).
 - Browser-Tests im Handy-Format (390 px): `python -m http.server 8080` im Projektordner starten, dann
   `node tools/browser-test.mjs tools/<seite>.html [bild.png]` mit `browser-test.html` (Vorrat, 12 Prüfungen), `scan-test.html` (Scan, 26,
   braucht Internet), `backup-test.html` (Sicherung, 28), `einkauf-test.html` (Einkaufsliste, 60), `rezepte-test.html` (Rezepte, 61, inkl.
-  Umstellung der Datenbank von Version 2 auf 3). Das Skript startet Edge unsichtbar und beendet ihn selbst. Danach den Testserver beenden.
+  Umstellung der Datenbank von Version 2 auf 3), `kochen-test.html` (Kochen, 57, inkl. Umstellung von Version 3 auf 4). Das Skript startet Edge unsichtbar und beendet ihn selbst. Danach den Testserver beenden.
 - Die Browser-Tests greifen Formularfelder nach Position an: Wird ein Feld in einem Formular eingefügt, die Positionen anpassen.
 
 ## So veröffentlichst du eine Änderung
@@ -72,10 +84,14 @@ Nächste Phase: 4 (Kochen-Modus mit Abziehen und Resten). Vorher Plan zeigen und
 - Import einer Sicherung ersetzt alle Daten (kein Mischen). Rezeptdatei: gleiche Kennung ersetzt das Rezept.
 - Phase 3 (mit dem Nutzer entschieden): Zutat per Vorschlag plus einmal korrigieren; Gewürze ohne Eintrag gelten als vorhanden;
   Startpaket gemischt mit Fleisch und Fisch, für 2 Portionen; Rezepte werden unter „Mehr" verwaltet, „Was koche ich?" ist der Tab.
+- Phase 4 (mit dem Nutzer entschieden): beim Abzug bald ablaufende Einträge zuerst, dann die angebrochene (kleinere Menge); leer gewordene Einträge
+  werden automatisch entfernt (mit „Rückgängig" zurückholbar); Kochen ist auch bei fehlenden Zutaten erlaubt (Hinweis). Reste stehen als eigener
+  Bereich oben im Vorrat. Keine Timer in den Schritten (Idee für später).
 - Zutaten im Rezept in EL/TL/Prise gibt es nicht: Gewürze „nach Bedarf" (Menge als Hinweis), gemessene Zutaten rechnet der Import ungefähr um.
 
 ## Offen / Bekanntes
-- Nichts offen aus Phase 1 bis 3.
+- Phase 4: Test am iPhone (Kochen von Anfang bis Ende, Fortsetzen nach App-Wechsel, Abzug mit zwei Packungen, Rest essen, Rückgängig).
+- Wake Lock (Bildschirm bleibt an) ist nur im Browser-Test mit Ersatzverhalten geprüft, ob es am iPhone klappt, zeigt der Test dort.
 - Echter Link-Import noch nicht an einer echten Seite geprüft; manche Seiten blockieren Programme (dann Text oder Foto an Claude Code).
 - Einheiten werden nicht umgerechnet (Zwiebel in Stück gegen kg im Vorrat: „unklar"). Möglich später: Gewichte pro Stück je Zutat.
 - Design bewusst schlicht, kommt in Phase 6. Bei vielen Rezepten ist die Gruppe „1–2 fehlen" lang; Sortierung nach ablaufenden Zutaten kommt in Phase 6.

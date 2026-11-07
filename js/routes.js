@@ -30,7 +30,7 @@ export const ROUTES = [
     label: 'Kochen',
     title: 'Kochen',
     icon: '🍳',
-    load: leer('Der Kochen-Modus kommt in Phase 4.'),
+    load: () => import('./screens/kochen.js'),
   },
   {
     id: 'tagebuch',

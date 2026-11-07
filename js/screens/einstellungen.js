@@ -51,7 +51,7 @@ export async function render(container) {
           herunterladen(sicherung.text, sicherung.name);
         }
         await merkeSicherung();
-        await zeige({ typ: '', text: `✔ Sicherung erstellt (${sicherung.anzahlVorrat} Vorrat, ${sicherung.anzahlProdukte} Produkte, ${sicherung.anzahlEinkauf} auf der Einkaufsliste, ${sicherung.anzahlRezepte} Rezepte). Bewahre die Datei sicher auf, zum Beispiel in iCloud Drive.` });
+        await zeige({ typ: '', text: `✔ Sicherung erstellt (${sicherung.anzahlVorrat} Vorrat, ${sicherung.anzahlProdukte} Produkte, ${sicherung.anzahlEinkauf} auf der Einkaufsliste, ${sicherung.anzahlRezepte} Rezepte, ${sicherung.anzahlReste} Reste). Bewahre die Datei sicher auf, zum Beispiel in iCloud Drive.` });
       } catch (e) {
         ersetze(statusBox, h('p', { class: 'hinweis fehler' }, `Das Sichern hat nicht geklappt: ${e.message}`));
       }
@@ -112,11 +112,11 @@ export async function render(container) {
     ersetze(
       container,
       h('h2', {}, 'Sicherung einspielen?'),
-      h('p', { class: 'hinweis' }, `Sicherung vom ${von}: ${geprueft.vorrat.length} Vorrat, ${geprueft.produkte.length} Produkte, ${geprueft.einkauf.length} auf der Einkaufsliste, ${geprueft.rezepte.length} Rezepte.`),
+      h('p', { class: 'hinweis' }, `Sicherung vom ${von}: ${geprueft.vorrat.length} Vorrat, ${geprueft.produkte.length} Produkte, ${geprueft.einkauf.length} auf der Einkaufsliste, ${geprueft.rezepte.length} Rezepte, ${geprueft.reste.length} Reste.`),
       h(
         'p',
         { class: 'hinweis warnung' },
-        `Das ersetzt deine jetzigen Daten (${aktuell.anzahlVorrat} Vorrat, ${aktuell.anzahlProdukte} Produkte, ${aktuell.anzahlEinkauf} auf der Einkaufsliste, ${aktuell.anzahlRezepte} Rezepte). Das lässt sich nicht rückgängig machen. Mach vorher eine Sicherung, falls du dir nicht sicher bist.`
+        `Das ersetzt deine jetzigen Daten (${aktuell.anzahlVorrat} Vorrat, ${aktuell.anzahlProdukte} Produkte, ${aktuell.anzahlEinkauf} auf der Einkaufsliste, ${aktuell.anzahlRezepte} Rezepte, ${aktuell.anzahlReste} Reste). Das lässt sich nicht rückgängig machen. Mach vorher eine Sicherung, falls du dir nicht sicher bist.`
       ),
       h(
         'div',
@@ -130,7 +130,7 @@ export async function render(container) {
               try {
                 await stelleWiederHer(geprueft);
                 const jetzt = await alleDaten();
-                await zeige({ typ: '', text: `✔ Eingespielt: ${jetzt.vorrat.length} Vorrat, ${jetzt.produkte.length} Produkte, ${jetzt.einkauf.length} auf der Einkaufsliste, ${jetzt.rezepte.length} Rezepte.` });
+                await zeige({ typ: '', text: `✔ Eingespielt: ${jetzt.vorrat.length} Vorrat, ${jetzt.produkte.length} Produkte, ${jetzt.einkauf.length} auf der Einkaufsliste, ${jetzt.rezepte.length} Rezepte, ${jetzt.reste.length} Reste.` });
               } catch (e) {
                 await zeige({ typ: 'fehler', text: `Das Einspielen hat nicht geklappt, deine Daten sind unverändert: ${e.message}` });
               }

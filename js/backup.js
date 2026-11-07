@@ -3,13 +3,14 @@ import { neuerEintrag } from './pantry.js';
 import { neuesProdukt } from './produkt.js';
 import { normalisiereListeneintrag } from './einkauf.js';
 import { neuesRezept } from './rezepte.js';
+import { normalisiereRest, normalisiereProtokoll } from './kochen.js';
 
 const APP = 'koch-app';
 const VERSION = 1;
-const NICHT_SICHERN = ['letzteSicherung']; // gehört zu diesem Handy, nicht zu den Daten
+const NICHT_SICHERN = ['letzteSicherung', 'kochen']; // gehört zu diesem Handy (Datum der Sicherung, laufender Kochvorgang), nicht zu den Daten
 const TAG_MS = 86400000;
 
-export function erzeugeSicherung({ vorrat, produkte, einstellungen, einkauf, rezepte }, jetzt = new Date()) {
+export function erzeugeSicherung({ vorrat, produkte, einstellungen, einkauf, rezepte, reste, gekocht }, jetzt = new Date()) {
   return {
     app: APP,
     version: VERSION,
@@ -19,6 +20,8 @@ export function erzeugeSicherung({ vorrat, produkte, einstellungen, einkauf, rez
       produkte,
       einkauf: einkauf || [],
       rezepte: rezepte || [],
+      reste: reste || [],
+      gekocht: gekocht || [],
       einstellungen: (einstellungen || []).filter((e) => !NICHT_SICHERN.includes(e.key)),
     },
   };
@@ -112,10 +115,29 @@ export function pruefeSicherung(text) {
     return r;
   });
 
+  // Reste und Kochprotokoll gibt es erst seit Phase 4: In älteren Sicherungen fehlen sie, das ist in Ordnung.
+  const liste = (roh, name, beschreibung, pruefe) => {
+    if (roh !== undefined && !Array.isArray(roh)) throw new Error(`${beschreibung} in der Datei ist beschädigt.`);
+    const ids = new Set();
+    return (roh || []).map((x, i) => {
+      let r;
+      try {
+        r = pruefe(x);
+      } catch (fehler) {
+        throw new Error(`${name} ${i + 1}: ${fehler.message}`);
+      }
+      if (ids.has(r.id)) throw new Error(`${beschreibung}: Eine Kennung kommt doppelt vor.`);
+      ids.add(r.id);
+      return r;
+    });
+  };
+  const reste = liste(d.reste, 'Rest', 'Die Liste der Reste', normalisiereRest);
+  const gekocht = liste(d.gekocht, 'Kochprotokoll', 'Das Kochprotokoll', normalisiereProtokoll);
+
   const einstellungen = (Array.isArray(d.einstellungen) ? d.einstellungen : []).filter(
     (e) => e && typeof e.key === 'string' && !NICHT_SICHERN.includes(e.key) && 'value' in e
   );
-  return { vorrat, produkte, einkauf, rezepte, einstellungen, erstelltAm: typeof s.erstelltAm === 'string' ? s.erstelltAm : null };
+  return { vorrat, produkte, einkauf, rezepte, reste, gekocht, einstellungen, erstelltAm: typeof s.erstelltAm === 'string' ? s.erstelltAm : null };
 }
 
 // Volle Tage seit einem Zeitpunkt. Kaputtes oder fehlendes Datum: null.

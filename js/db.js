@@ -5,15 +5,19 @@
 //  - produkte:       bekannte Produkte per Barcode, auch von Hand eingetragene (Schlüssel: barcode)
 //  - einkauf:        Einkaufsliste (Schlüssel: id)
 //  - rezepte:        Rezepte (Schlüssel: id)
+//  - reste:          übrig gebliebene Portionen nach dem Kochen (Schlüssel: id)
+//  - gekocht:        Kochprotokoll mit allem, was abgezogen wurde, für "Rückgängig" (Schlüssel: id)
 //  - einstellungen:  z. B. Datum der letzten Sicherung (Schlüssel: key)
 
 const DB_NAME = 'koch-app';
-const DB_VERSION = 3; // 2: Tabelle "einkauf" (Phase 2), 3: Tabelle "rezepte" (Phase 3). Bestehende Daten bleiben erhalten.
+const DB_VERSION = 4; // 2: "einkauf" (Phase 2), 3: "rezepte" (Phase 3), 4: "reste" und "gekocht" (Phase 4). Bestehende Daten bleiben erhalten.
 export const TABELLEN = {
   vorrat: 'id',
   produkte: 'barcode',
   einkauf: 'id',
   rezepte: 'id',
+  reste: 'id',
+  gekocht: 'id',
   einstellungen: 'key',
 };
 
@@ -69,23 +73,25 @@ export async function datenSchuetzen() {
 
 // Alle Daten auf einmal lesen (für die Sicherung).
 export async function alleDaten() {
-  const [vorrat, produkte, einkauf, rezepte, einstellungen] = await Promise.all([
+  const [vorrat, produkte, einkauf, rezepte, reste, gekocht, einstellungen] = await Promise.all([
     alle('vorrat'),
     alle('produkte'),
     alle('einkauf'),
     alle('rezepte'),
+    alle('reste'),
+    alle('gekocht'),
     alle('einstellungen'),
   ]);
-  return { vorrat, produkte, einkauf, rezepte, einstellungen };
+  return { vorrat, produkte, einkauf, rezepte, reste, gekocht, einstellungen };
 }
 
 // Ersetzt Vorrat, Produkte und Einstellungen auf einmal. Entweder gelingt alles oder nichts
 // (eine Transaktion). Das Datum der letzten Sicherung bleibt erhalten, es gehört zu diesem Handy.
-export async function ersetzeDaten({ vorrat, produkte, einkauf = [], rezepte = [], einstellungen }) {
+export async function ersetzeDaten({ vorrat, produkte, einkauf = [], rezepte = [], reste = [], gekocht = [], einstellungen }) {
   const letzte = await hole('einstellungen', 'letzteSicherung');
   const db = await oeffneDb();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(['vorrat', 'produkte', 'einkauf', 'rezepte', 'einstellungen'], 'readwrite');
+    const tx = db.transaction(['vorrat', 'produkte', 'einkauf', 'rezepte', 'reste', 'gekocht', 'einstellungen'], 'readwrite');
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
     tx.onabort = () => reject(tx.error);
@@ -94,6 +100,8 @@ export async function ersetzeDaten({ vorrat, produkte, einkauf = [], rezepte = [
       ['produkte', produkte],
       ['einkauf', einkauf],
       ['rezepte', rezepte],
+      ['reste', reste],
+      ['gekocht', gekocht],
       ['einstellungen', [...einstellungen, ...(letzte ? [letzte] : [])]],
     ];
     for (const [name, liste] of tabellen) {

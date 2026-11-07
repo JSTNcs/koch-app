@@ -222,3 +222,11 @@ textarea { font: inherit; width: 100%; padding: 8px 12px; border: 1px solid var(
 .zutat-zeile { border: 1px solid var(--linie); border-radius: 12px; padding: 8px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
 label.kasten { display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 400; }
 label.kasten input { width: 24px; min-height: 24px; height: 24px; }
+
+/* Kochen */
+button.gross { min-height: 64px; font-size: 20px; }
+.fortschritt { height: 8px; background: var(--gruen-hell); border-radius: 4px; overflow: hidden; margin: 8px 0 4px; }
+.fortschritt .balken { height: 100%; background: var(--gruen); }
+.schritt-text { font-size: 24px; line-height: 1.45; margin: 20px 0 24px; }
+
+.info { color: var(--grau); font-size: 16px; margin-top: 4px; overflow-wrap: anywhere; }

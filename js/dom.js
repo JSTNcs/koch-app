@@ -8,7 +8,7 @@ export function h(tag, attribute = {}, ...kinder) {
     else if (name === 'value') el.value = wert;
     else el.setAttribute(name, wert === true ? '' : wert);
   }
-  for (const kind of kinder.flat()) {
+  for (const kind of kinder.flat(Infinity)) {
     if (kind == null || kind === false) continue;
     el.append(kind instanceof Node ? kind : document.createTextNode(String(kind)));
   }
@@ -17,5 +17,5 @@ export function h(tag, attribute = {}, ...kinder) {
 
 // Ersetzt den Inhalt von "el". Leere Teile (null, false) werden ausgelassen statt als Text "null" gezeigt.
 export function ersetze(el, ...kinder) {
-  el.replaceChildren(...kinder.flat().filter((k) => k !== null && k !== undefined && k !== false));
+  el.replaceChildren(...kinder.flat(Infinity).filter((k) => k !== null && k !== undefined && k !== false));
 }
