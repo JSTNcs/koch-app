@@ -37,7 +37,7 @@ export const ROUTES = [
     label: 'Tagebuch',
     title: 'Tagebuch',
     icon: '📒',
-    load: leer('Das Tagebuch kommt in Phase 5.'),
+    load: () => import('./screens/tagebuch.js'),
   },
   {
     id: 'einstellungen',

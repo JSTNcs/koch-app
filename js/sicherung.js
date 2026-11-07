@@ -14,6 +14,7 @@ export async function erstelleSicherung(jetzt = new Date()) {
     anzahlEinkauf: daten.einkauf.length,
     anzahlRezepte: daten.rezepte.length,
     anzahlReste: daten.reste.length,
+    anzahlTagebuch: daten.tagebuch.length,
   };
 }
 
@@ -40,7 +41,7 @@ export async function ladeHinweis(jetzt = new Date()) {
   try {
     const daten = await alleDaten();
     const letzte = daten.einstellungen.find((e) => e.key === 'letzteSicherung')?.value ?? null;
-    return sicherungsHinweis({ letzte, hatDaten: daten.vorrat.length + daten.produkte.length + daten.einkauf.length + daten.rezepte.length + daten.reste.length > 0, jetzt });
+    return sicherungsHinweis({ letzte, hatDaten: daten.vorrat.length + daten.produkte.length + daten.einkauf.length + daten.rezepte.length + daten.reste.length + daten.tagebuch.length > 0, jetzt });
   } catch {
     return null;
   }

@@ -20,10 +20,12 @@ const UEBERSCHRIFT = {
   vorrat: 'Barcode scannen',
   liste: 'Produkt für die Liste scannen',
   einkaufen: 'Einkauf scannen',
+  tagebuch: 'Essen scannen',
 };
 
 // fertig(): wird aufgerufen, wenn der Nutzer zurück will.
-export function starteScan(container, { fertig, modus = 'vorrat' }) {
+// beiProdukt(produkt, hinweis): Wenn angegeben (Tagebuch), übernimmt der Aufrufer das Produkt statt des Vorrats-Formulars.
+export function starteScan(container, { fertig, modus = 'vorrat', beiProdukt = null }) {
   let scanner = null;
   let beendet = false;
 
@@ -139,6 +141,8 @@ export function starteScan(container, { fertig, modus = 'vorrat' }) {
     if (!produkt) {
       produkt = { barcode: code, name: '', marke: null, art: 'menge', packung: null, einheit: 'g', naehrwerte: null, quelle: 'manuell', gruppe: null };
     }
+
+    if (beiProdukt) return beiProdukt(produkt, hinweis);
 
     // Beim Einkaufen: Steht das Produkt (oder ein gleichwertiges) auf der Liste? Dann Anzahl vorausfüllen.
     let anzahlStart = 1;

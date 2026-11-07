@@ -6,6 +6,7 @@ import { neuesProdukt } from '../js/produkt.js';
 import { neuerProduktEintrag, neuerFreiEintrag, schalteHaken } from '../js/einkauf.js';
 import { neuesRezept } from '../js/rezepte.js';
 import { neuerRest, neuesProtokoll } from '../js/kochen.js';
+import { neueMahlzeit } from '../js/tagebuch.js';
 
 const JETZT = new Date('2026-11-06T12:00:00.000Z');
 const tageZurueck = (n, extraMs = 0) => new Date(JETZT.getTime() - n * 86400000 - extraMs).toISOString();
@@ -254,4 +255,45 @@ test('Reste und Kochprotokoll: Fehler mit Nummer, doppelte Kennungen, kaputte Li
 test('Der laufende Kochvorgang gehört nicht in die Sicherung', () => {
   const s = erzeugeSicherung({ ...daten(), einstellungen: [{ key: 'kochen', value: { schritt: 2 } }, { key: 'irgendwas', value: 1 }] }, JETZT);
   assert.deepEqual(s.daten.einstellungen, [{ key: 'irgendwas', value: 1 }]);
+});
+
+// --- Tagebuch und Körperdaten in der Sicherung ---
+const mahlzeit1 = neueMahlzeit({ name: 'Joghurt', kcal: 150, eiweiss: 8, kohlenhydrate: 12, fett: 7, menge: '150 g', quelle: 'produkt', barcode: '4006381333931' }, { id: 'mz1', jetzt: JETZT });
+const profilDaten = () => ({
+  geschlecht: 'm',
+  geburtsjahr: new Date().getFullYear() - 30,
+  groesseCm: 180,
+  gewichtKg: 80,
+  aktivitaet: 'leicht',
+  ziel: 'abnehmen',
+  tagesziel: { kcal: 2080, eiweiss: 112, kohlenhydrate: 253, fett: 69 },
+  manuell: false,
+});
+
+test('Tagebuch: kommt in die Sicherung und wieder heraus', () => {
+  const s = erzeugeSicherung({ ...daten(), tagebuch: [mahlzeit1] }, JETZT);
+  assert.equal(s.daten.tagebuch.length, 1);
+  assert.deepEqual(pruefeSicherung(JSON.stringify(s)).tagebuch, [mahlzeit1]);
+});
+test('Tagebuch: alte Sicherungen ohne Tagebuch bleiben lesbar', () => {
+  const alt = gueltig();
+  delete alt.daten.tagebuch;
+  assert.deepEqual(pruefeSicherung(JSON.stringify(alt)).tagebuch, []);
+  assert.deepEqual(erzeugeSicherung(daten(), JETZT).daten.tagebuch, []);
+});
+test('Tagebuch: Fehler mit Nummer, doppelte Kennung, kaputte Liste', () => {
+  const basis = () => JSON.parse(JSON.stringify(erzeugeSicherung({ ...daten(), tagebuch: [mahlzeit1, { ...mahlzeit1, id: 'mz2' }] }, JETZT)));
+  const a = basis(); a.daten.tagebuch[1].kcal = -1;
+  assert.throws(() => pruefeSicherung(JSON.stringify(a)), /Tagebucheintrag 2.*Kalorien/);
+  const b = basis(); b.daten.tagebuch[1].id = 'mz1';
+  assert.throws(() => pruefeSicherung(JSON.stringify(b)), /Tagebuch.*doppelt/);
+  const c = basis(); c.daten.tagebuch = 'x';
+  assert.throws(() => pruefeSicherung(JSON.stringify(c)), /Tagebuch/);
+});
+test('Körperdaten und Tagesziel (Einstellung "profil") bleiben erhalten und werden geprüft', () => {
+  const s = erzeugeSicherung({ ...daten(), einstellungen: [{ key: 'profil', value: profilDaten() }] }, JETZT);
+  assert.deepEqual(pruefeSicherung(JSON.stringify(s)).einstellungen, [{ key: 'profil', value: profilDaten() }]);
+  const kaputt = JSON.parse(JSON.stringify(s));
+  kaputt.daten.einstellungen[0].value.gewichtKg = 5;
+  assert.throws(() => pruefeSicherung(JSON.stringify(kaputt)), /Körperdaten.*Gewicht/);
 });

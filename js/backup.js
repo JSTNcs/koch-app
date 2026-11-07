@@ -4,13 +4,15 @@ import { neuesProdukt } from './produkt.js';
 import { normalisiereListeneintrag } from './einkauf.js';
 import { neuesRezept } from './rezepte.js';
 import { normalisiereRest, normalisiereProtokoll } from './kochen.js';
+import { normalisiereMahlzeit } from './tagebuch.js';
+import { normalisiereProfil } from './tagesziel.js';
 
 const APP = 'koch-app';
 const VERSION = 1;
 const NICHT_SICHERN = ['letzteSicherung', 'kochen']; // gehört zu diesem Handy (Datum der Sicherung, laufender Kochvorgang), nicht zu den Daten
 const TAG_MS = 86400000;
 
-export function erzeugeSicherung({ vorrat, produkte, einstellungen, einkauf, rezepte, reste, gekocht }, jetzt = new Date()) {
+export function erzeugeSicherung({ vorrat, produkte, einstellungen, einkauf, rezepte, reste, gekocht, tagebuch }, jetzt = new Date()) {
   return {
     app: APP,
     version: VERSION,
@@ -22,6 +24,7 @@ export function erzeugeSicherung({ vorrat, produkte, einstellungen, einkauf, rez
       rezepte: rezepte || [],
       reste: reste || [],
       gekocht: gekocht || [],
+      tagebuch: tagebuch || [],
       einstellungen: (einstellungen || []).filter((e) => !NICHT_SICHERN.includes(e.key)),
     },
   };
@@ -133,11 +136,20 @@ export function pruefeSicherung(text) {
   };
   const reste = liste(d.reste, 'Rest', 'Die Liste der Reste', normalisiereRest);
   const gekocht = liste(d.gekocht, 'Kochprotokoll', 'Das Kochprotokoll', normalisiereProtokoll);
+  // Das Tagebuch gibt es erst seit Phase 5.
+  const tagebuch = liste(d.tagebuch, 'Tagebucheintrag', 'Das Tagebuch', normalisiereMahlzeit);
 
-  const einstellungen = (Array.isArray(d.einstellungen) ? d.einstellungen : []).filter(
-    (e) => e && typeof e.key === 'string' && !NICHT_SICHERN.includes(e.key) && 'value' in e
-  );
-  return { vorrat, produkte, einkauf, rezepte, reste, gekocht, einstellungen, erstelltAm: typeof s.erstelltAm === 'string' ? s.erstelltAm : null };
+  const einstellungen = (Array.isArray(d.einstellungen) ? d.einstellungen : [])
+    .filter((e) => e && typeof e.key === 'string' && !NICHT_SICHERN.includes(e.key) && 'value' in e)
+    .map((e) => {
+      if (e.key !== 'profil') return e;
+      try {
+        return { key: e.key, value: normalisiereProfil(e.value) }; // Körperdaten und Tagesziel
+      } catch (fehler) {
+        throw new Error(`Die Körperdaten in der Datei sind ungültig: ${fehler.message}`);
+      }
+    });
+  return { vorrat, produkte, einkauf, rezepte, reste, gekocht, tagebuch, einstellungen, erstelltAm: typeof s.erstelltAm === 'string' ? s.erstelltAm : null };
 }
 
 // Volle Tage seit einem Zeitpunkt. Kaputtes oder fehlendes Datum: null.

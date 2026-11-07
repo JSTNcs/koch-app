@@ -230,3 +230,16 @@ button.gross { min-height: 64px; font-size: 20px; }
 .schritt-text { font-size: 24px; line-height: 1.45; margin: 20px 0 24px; }
 
 .info { color: var(--grau); font-size: 16px; margin-top: 4px; overflow-wrap: anywhere; }
+
+/* Tagebuch */
+.tag-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.tag-name { flex: 1 1 auto; background: transparent; color: var(--text); font-size: 20px; font-weight: 700; min-height: 48px; }
+.summe-karte { border: 1px solid var(--linie); border-radius: 12px; padding: 14px; }
+.summe-gross { font-size: 34px; font-weight: 700; line-height: 1.1; margin-bottom: 8px; }
+.summe-von { font-size: 18px; font-weight: 400; color: var(--grau); }
+.balken-aussen { height: 10px; background: var(--gruen-hell); border-radius: 5px; overflow: hidden; margin: 4px 0; }
+.balken-innen { height: 100%; background: var(--gruen); }
+.makros { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.makro-kopf { display: flex; justify-content: space-between; font-size: 16px; }
+button.eintrag-knopf { display: flex; align-items: center; justify-content: space-between; text-align: left; margin-bottom: 8px; gap: 8px; }
+button.eintrag-knopf .texte .titel { color: var(--text); }

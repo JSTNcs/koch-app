@@ -1,0 +1,260 @@
+<!doctype html>
+<!-- Prüft Phase 5 Teil 1: Datenbank-Umstellung auf Version 5, Tagesziel (Vorschlag, Erklärung, eigene Zahlen, unter 18),
+     Tagebuch (frei, zuletzt gegessen, ändern, löschen, Tage blättern, aus dem Vorrat mit Abziehen, Scan), Sicherung.
+     Aufruf: node tools/browser-test.mjs tools/tagebuch-test.html -->
+<meta charset="utf-8">
+<body style="margin:0;background:#888">
+<pre id="out" style="position:fixed;right:0;top:0;width:300px;background:#fff;font-size:11px;margin:0;padding:4px;z-index:99"></pre>
+<iframe id="app" style="width:390px;height:780px;border:0;background:#fff;display:block;margin:10px"></iframe>
+<script type="module">
+import { alle, speichere } from '../js/db.js';
+import { neuerEintrag } from '../js/pantry.js';
+import { neuesProdukt } from '../js/produkt.js';
+import { tagVon, verschiebeTag } from '../js/tagebuch.js';
+import { erstelleSicherung, liesSicherung, stelleWiederHer } from '../js/sicherung.js';
+
+const out = document.getElementById('out');
+const log = (s) => (out.textContent += s + '\n');
+const ok = (b, t) => log((b ? 'PASS ' : 'FAIL ') + t);
+const warte = (ms) => new Promise((r) => setTimeout(r, ms));
+const frame = document.getElementById('app');
+const doc = () => frame.contentDocument;
+const text = () => doc().body.innerText;
+const knopf = (s) => [...doc().querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(s));
+const klick = async (s, ms = 400) => { const k = knopf(s); if (!k) throw new Error('Knopf fehlt: ' + s + ' | Sichtbar: ' + text().slice(0, 300)); k.click(); await warte(ms); };
+const tippe = (el, w) => { el.value = w; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); };
+const feld = (label) => doc().querySelector(`[aria-label="${label}"]`);
+async function bis(f, ms = 8000) { const t = Date.now(); while (Date.now() - t < ms) { if (f()) return true; await warte(120); } return false; }
+const stabil = (x) => JSON.stringify(x, (k, v) => (v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b))) : v));
+const ohneLeer = (x) => stabil(JSON.parse(JSON.stringify(x, (k, v) => (v === null ? undefined : v))));
+const mitPruefziffer = (b12) => b12 + ((10 - ([...b12].reduce((s, d, i) => s + Number(d) * (i % 2 ? 3 : 1), 0) % 10)) % 10);
+const profilDB = async () => (await alle('einstellungen')).find((e) => e.key === 'profil')?.value ?? null;
+const tagebuchDB = async () => (await alle('tagebuch')).sort((a, b) => a.zeit.localeCompare(b.zeit));
+const vorratEintrag = async (id) => (await alle('vorrat')).find((e) => e.id === id);
+const heute = tagVon(new Date());
+const jahr = new Date().getFullYear();
+
+async function seite(hash) {
+  const geladen = new Promise((r) => (frame.onload = r));
+  if (frame.contentWindow.location.href.includes('index.html')) { frame.contentWindow.location.hash = hash; frame.contentWindow.location.reload(); }
+  else frame.src = '../index.html' + hash;
+  await geladen;
+  await bis(() => doc().querySelector('#screen')?.children.length, 10000);
+  frame.contentWindow.confirm = () => true;
+  await warte(300);
+}
+async function eintragen(w) { // Tagebuch: "＋ Eintragen" -> Weg wählen
+  await klick('＋ Eintragen', 350);
+  await klick(w, 400);
+}
+
+async function lauf() {
+  // ===== 0. Alte Datenbank (Phase 4, Version 4) nachbauen =====
+  await new Promise((r) => { const q = indexedDB.deleteDatabase('koch-app'); q.onsuccess = q.onerror = q.onblocked = r; });
+  const alt = { id: 'alt1', name: 'Altes Mehl', art: 'menge', menge: 1000, einheit: 'g', da: null, ablauf: null, barcode: null, zutat: null };
+  await new Promise((res, rej) => {
+    const q = indexedDB.open('koch-app', 4);
+    q.onupgradeneeded = () => { const d = q.result; for (const [n, k] of [['vorrat', 'id'], ['produkte', 'barcode'], ['einkauf', 'id'], ['rezepte', 'id'], ['reste', 'id'], ['gekocht', 'id'], ['einstellungen', 'key']]) d.createObjectStore(n, { keyPath: k }); };
+    q.onsuccess = () => { const d = q.result; const tx = d.transaction(['vorrat'], 'readwrite'); tx.objectStore('vorrat').put(alt); tx.oncomplete = () => { d.close(); res(); }; };
+    q.onerror = () => rej(q.error);
+  });
+  const v = await alle('vorrat'); // öffnet mit Version 5 -> Umstellung
+  ok(v.length === 1 && v[0].id === 'alt1' && (await alle('tagebuch')).length === 0, 'Umstellung auf Version 5: Vorrat unverändert, Tabelle "tagebuch" da und leer');
+
+  // ===== Daten anlegen =====
+  const joghurtCode = '4006381333931';
+  await speichere('produkte', neuesProdukt({ barcode: joghurtCode, name: 'Joghurt Natur', art: 'menge', packung: 500, einheit: 'g', naehrwerte: { kcal: 60, eiweiss: 4, kohlenhydrate: 5, fett: 3 } }));
+  await speichere('produkte', neuesProdukt({ barcode: '3017620422003', name: 'Haferflocken', art: 'menge', packung: 500, einheit: 'g' }));
+  const E = (id, name, menge, einheit, o = {}) => speichere('vorrat', neuerEintrag({ name, art: 'menge', menge, einheit, ...o }, { id }));
+  await E('vj', 'Joghurt Natur', 500, 'g', { barcode: joghurtCode });
+  await E('vh', 'Haferflocken', 500, 'g', { barcode: '3017620422003' });
+  await E('ve', 'Eier', 6, 'stk');
+
+  // ===== 1. Tagebuch ohne Tagesziel =====
+  await seite('#/tagebuch');
+  ok(text().includes('Heute') && text().includes('Für diesen Tag steht noch nichts im Tagebuch') && !!knopf('🎯 Tagesziel anlegen'), 'Tagebuch ohne Ziel: Heute, leer, Knopf "Tagesziel anlegen"');
+  ok(doc().querySelector('.summe-gross').textContent.startsWith('0'), 'Tageswert 0 kcal');
+  const weiter = knopf('▶'); ok(weiter?.disabled === true, 'Der Pfeil in die Zukunft ist gesperrt');
+
+  // ===== 2. Tagesziel =====
+  await seite('#/einstellungen');
+  await klick('🎯 Körperdaten und Tagesziel', 500);
+  ok(text().includes('Körperdaten und Tagesziel') && text().includes('Sicherungsdatei'), 'Maske öffnet mit Datenschutz-Hinweis');
+  await klick('Speichern', 300);
+  ok(text().includes('Geschlecht'), 'Ohne Eingaben: Fehlermeldung (Geschlecht)');
+  const sel = () => doc().querySelectorAll('select');
+  tippe(sel()[0], 'm'); tippe(feld('Geburtsjahr'), String(jahr - 30)); tippe(feld('Größe in cm'), '180'); tippe(feld('Gewicht in kg'), '80');
+  tippe(sel()[1], 'leicht'); tippe(sel()[2], 'abnehmen');
+  await klick('Vorschlag berechnen', 400);
+  ok(feld('Kalorien').value === '2080' && feld('Eiweiß').value === '112' && feld('Kohlenhydrate').value === '253' && feld('Fett').value === '69', 'Vorschlag: 2080 kcal, Eiweiß 112 g, Kohlenhydrate 253 g, Fett 69 g');
+  ok(text().includes('So wird gerechnet') && text().includes('Mifflin-St-Jeor') && text().includes('= 1780 kcal') && text().includes('= 2448 kcal'), 'Rechenweg mit Mifflin-St-Jeor, 1780 kcal Grundumsatz und 2448 kcal Gesamtbedarf');
+  await klick('Speichern', 500);
+  ok(text().includes('✔ Gespeichert: 2080 kcal') && !text().includes('von dir angepasst'), 'Gespeichert, nicht angepasst');
+  let p = await profilDB();
+  ok(p && p.tagesziel.kcal === 2080 && p.manuell === false && p.geburtsjahr === jahr - 30 && p.geschlecht === 'm', 'Profil gespeichert (manuell: nein)');
+  tippe(feld('Kalorien'), '2000');
+  await klick('Speichern', 500);
+  ok(text().includes('2000 kcal pro Tag (von dir angepasst)'), 'Eigene Zahl: "von dir angepasst"');
+  p = await profilDB();
+  ok(p.tagesziel.kcal === 2000 && p.manuell === true, 'Eigene Zahl gespeichert (manuell: ja)');
+  tippe(feld('Gewicht in kg'), '5');
+  await klick('Speichern', 300);
+  ok(text().includes('Gewicht muss zwischen'), 'Unmögliches Gewicht wird abgelehnt');
+  tippe(feld('Gewicht in kg'), '80,5');
+  tippe(feld('Kohlenhydrate'), '');
+  await klick('Speichern', 300);
+  ok(text().includes('alle vier Zahlen'), 'Leere Zielzahl wird abgelehnt');
+  tippe(feld('Geburtsjahr'), String(jahr - 16)); tippe(sel()[2], 'abnehmen');
+  await klick('Vorschlag berechnen', 400);
+  ok(text().includes('unter 18') && text().includes('kein Abnehmen'), 'Unter 18: Hinweis, kein Abnehmen');
+  const halten = Number(feld('Kalorien').value);
+  tippe(sel()[2], 'halten'); await klick('Vorschlag berechnen', 400);
+  ok(Number(feld('Kalorien').value) === halten, 'Unter 18: Abnehmen ergibt denselben Wert wie Halten');
+  await seite('#/einstellungen'); await klick('🎯 Körperdaten und Tagesziel', 500);
+  ok(feld('Kalorien').value === '2000' && feld('Gewicht in kg').value === '80' && feld('Geburtsjahr').value === String(jahr - 30), 'Nach dem Neuladen sind die gespeicherten Werte da (Gewicht 80, Ziel 2000)');
+
+  // ===== 3. Tagebuch mit Ziel: frei eintragen =====
+  await seite('#/tagebuch');
+  ok(!knopf('🎯 Tagesziel anlegen') && text().includes('von 2000 kcal'), 'Mit Ziel: "von 2000 kcal", kein Anlegen-Knopf');
+  await eintragen('✏️ Frei eintippen');
+  await klick('Eintragen', 300);
+  ok(text().includes('Name'), 'Frei: ohne Name wird abgelehnt');
+  tippe(feld('Name'), 'Pizza'); tippe(feld('Kalorien'), '800'); tippe(feld('Eiweiß'), '30'); tippe(feld('Kohlenhydrate'), '90'); tippe(feld('Fett'), '35');
+  await klick('Eintragen', 500);
+  let t = await tagebuchDB();
+  ok(t.length === 1 && t[0].name === 'Pizza' && t[0].kcal === 800 && t[0].tag === heute && t[0].quelle === 'frei', 'Pizza 800 kcal heute eingetragen');
+  ok(text().includes('Pizza') && doc().querySelector('.summe-gross').textContent.startsWith('800') && text().includes('Noch 1200 kcal'), 'Tagesansicht: 800 von 2000, "Noch 1200 kcal"');
+  ok(text().includes('Eiweiß') && text().includes('30 / 112 g') && text().includes('90 / 253 g') && text().includes('35 / 69 g'), 'Eiweiß, Kohlenhydrate, Fett gegen das Ziel');
+
+  // ===== 4. Zuletzt gegessen =====
+  await klick('＋ Eintragen', 350);
+  ok(text().includes('Zuletzt gegessen') && text().includes('Pizza'), '"Zuletzt gegessen" zeigt Pizza');
+  [...doc().querySelectorAll('.eintrag-knopf')].find((b) => b.textContent.includes('Pizza')).click(); await warte(400);
+  ok(feld('Kalorien').value === '800' && feld('Name').value === 'Pizza', 'Vorlage: Werte sind vorausgefüllt');
+  await klick('Eintragen', 500);
+  t = await tagebuchDB();
+  ok(t.length === 2 && text().includes('Noch 400 kcal'), 'Zweite Pizza: 1600 von 2000, Noch 400 kcal');
+
+  // ===== 5. Ändern und Löschen =====
+  [...doc().querySelectorAll('.eintrag-knopf')].find((b) => b.textContent.includes('Pizza')).click(); await warte(400);
+  ok(text().includes('Eintrag ändern') && !!knopf('Löschen'), 'Ändern-Maske mit Löschen-Knopf');
+  tippe(feld('Kalorien'), '700');
+  await klick('Speichern', 500);
+  t = await tagebuchDB();
+  ok(t.length === 2 && t.filter((e) => e.kcal === 700).length === 1 && text().includes('Noch 500 kcal'), 'Geändert auf 700 kcal (nichts verdoppelt), Noch 500');
+  [...doc().querySelectorAll('.eintrag-knopf')].find((b) => b.textContent.includes('700 kcal')).click(); await warte(400);
+  await klick('Löschen', 500);
+  t = await tagebuchDB();
+  ok(t.length === 1 && t[0].kcal === 800 && text().includes('wurde gelöscht'), 'Gelöscht, eine Pizza bleibt');
+
+  // ===== 6. Aus dem Vorrat =====
+  await eintragen('🥫 Aus dem Vorrat');
+  tippe(doc().querySelector('input[aria-label="Im Vorrat suchen"]'), 'jog'); await warte(250);
+  ok(doc().querySelectorAll('.eintrag-knopf').length === 1 && text().includes('500 g'), 'Vorratssuche "jog" findet den Joghurt');
+  doc().querySelector('.eintrag-knopf').click(); await warte(450);
+  ok(feld('Kalorien pro 100').value === '60' && feld('Eiweiß pro 100').value === '4' && text().includes('Nährwerte pro 100 g'), 'Nährwerte des Produkts sind vorausgefüllt (60 kcal pro 100 g)');
+  ok(feld('Menge').value === '100' && !!knopf('Ganze Packung (500 g)'), 'Menge 100 g vorgegeben, Knopf "Ganze Packung (500 g)"');
+  await klick('Ganze Packung', 250);
+  ok(text().includes('Das sind 300 kcal'), 'Ganze Packung: Vorschau 300 kcal');
+  tippe(feld('Menge'), '150');
+  ok(text().includes('Das sind 90 kcal · Eiweiß 6 g · Kohlenhydrate 7,5 g · Fett 4,5 g'), 'Vorschau für 150 g: 90 kcal, Eiweiß 6 g, Kohlenhydrate 7,5 g, Fett 4,5 g');
+  ok(doc().querySelector('input[type=checkbox]').checked, '"Aus dem Vorrat abziehen" ist vorangehakt');
+  await klick('Eintragen', 600);
+  t = await tagebuchDB();
+  const jog = t.find((e) => e.name === 'Joghurt Natur');
+  ok(jog && jog.kcal === 90 && jog.eiweiss === 6 && jog.quelle === 'vorrat' && jog.menge === '150 g' && jog.barcode === joghurtCode, 'Eintrag: Joghurt 150 g, 90 kcal, Quelle Vorrat');
+  ok((await vorratEintrag('vj')).menge === 350 && text().includes('150 g aus dem Vorrat abgezogen'), 'Vorrat: 500 g -> 350 g');
+  // Stück-Eintrag ohne Nährwerte, nicht abziehen
+  await eintragen('🥫 Aus dem Vorrat');
+  tippe(doc().querySelector('input[aria-label="Im Vorrat suchen"]'), 'eier'); await warte(250);
+  doc().querySelector('.eintrag-knopf').click(); await warte(450);
+  ok(text().includes('Nährwerte pro Stück') && feld('Menge').value === '1' && feld('Kalorien pro 100').value === '', 'Eier (Stück): Nährwerte pro Stück, Menge 1, noch leer');
+  await klick('Eintragen', 300);
+  ok(text().includes('Bitte die Kalorien pro Stück eintragen'), 'Ohne Kalorien wird abgelehnt');
+  tippe(feld('Kalorien pro 100'), '78'); tippe(feld('Eiweiß pro 100'), '6,3'); tippe(feld('Menge'), '2');
+  ok(text().includes('Das sind 156 kcal'), 'Zwei Eier: 156 kcal');
+  doc().querySelector('input[type=checkbox]').click();
+  await klick('Eintragen', 600);
+  t = await tagebuchDB();
+  ok(t.some((e) => e.name === 'Eier' && e.kcal === 156 && e.ca === true), 'Eier eingetragen (unvollständige Werte als "ca.")');
+  ok((await vorratEintrag('ve')).menge === 6, 'Haken abgewählt: Vorrat unverändert (6 Eier)');
+  // Produkt ohne Nährwerte merkt sich die eingetragenen
+  await eintragen('🥫 Aus dem Vorrat');
+  tippe(doc().querySelector('input[aria-label="Im Vorrat suchen"]'), 'hafer'); await warte(250);
+  doc().querySelector('.eintrag-knopf').click(); await warte(450);
+  tippe(feld('Kalorien pro 100'), '370'); tippe(feld('Eiweiß pro 100'), '13'); tippe(feld('Kohlenhydrate pro 100'), '59'); tippe(feld('Fett pro 100'), '7'); tippe(feld('Menge'), '50');
+  await klick('Eintragen', 600);
+  const hafer = (await alle('produkte')).find((x) => x.name === 'Haferflocken');
+  ok(hafer.naehrwerte?.kcal === 370 && (await vorratEintrag('vh')).menge === 450, 'Das Produkt merkt sich die Nährwerte, Vorrat 450 g');
+  await eintragen('🥫 Aus dem Vorrat');
+  tippe(doc().querySelector('input[aria-label="Im Vorrat suchen"]'), 'hafer'); await warte(250);
+  doc().querySelector('.eintrag-knopf').click(); await warte(450);
+  ok(feld('Kalorien pro 100').value === '370', 'Beim nächsten Mal sind die Nährwerte schon da');
+  await klick('Abbrechen', 400);
+
+  // ===== 7. Scan (Barcode eintippen) =====
+  await eintragen('📷 Scannen');
+  ok(text().includes('Essen scannen'), 'Scan-Ansicht "Essen scannen"');
+  const eingabe = doc().querySelector('input[inputmode="numeric"]'); eingabe.closest('details').open = true;
+  tippe(eingabe, joghurtCode); await klick('Suchen', 300);
+  ok(await bis(() => text().includes('Eintragen') && !!feld('Kalorien pro 100')), 'Bekanntes Produkt: Eingabe-Maske');
+  ok(feld('Kalorien pro 100').value === '60' && text().includes('kennt die App schon') && !!doc().querySelector('input[type=checkbox]'), 'Nährwerte vorausgefüllt, Vorrats-Haken da (Produkt liegt im Vorrat)');
+  await klick('Eintragen', 600);
+  t = await tagebuchDB();
+  ok(t.some((e) => e.quelle === 'produkt' && e.name === 'Joghurt Natur' && e.menge === '100 g') && (await vorratEintrag('vj')).menge === 250, 'Gescannt: 100 g Joghurt eingetragen, Vorrat 350 -> 250 g');
+  // Unbekanntes Produkt ohne Internet: von Hand
+  frame.contentWindow.fetch = () => Promise.reject(new TypeError('Failed to fetch'));
+  await eintragen('📷 Scannen');
+  const e2 = doc().querySelector('input[inputmode="numeric"]'); e2.closest('details').open = true;
+  tippe(e2, mitPruefziffer('400000000003')); await klick('Suchen', 300);
+  ok(await bis(() => !!feld('Kalorien pro 100')) && text().includes('Keine Verbindung'), 'Unbekanntes Produkt ohne Internet: Maske zum Eintippen');
+  ok(!doc().querySelector('input[type=checkbox]'), 'Nicht im Vorrat: kein Abzieh-Haken');
+  tippe(feld('Name'), 'Müsliriegel'); tippe(feld('Menge'), '40'); tippe(feld('Kalorien pro 100'), '400'); tippe(feld('Fett pro 100'), '15');
+  await klick('Eintragen', 600);
+  t = await tagebuchDB();
+  const riegel = t.find((e) => e.name === 'Müsliriegel');
+  ok(riegel && riegel.kcal === 160 && riegel.fett === 6 && riegel.menge === '40 g', 'Müsliriegel 40 g: 160 kcal, Fett 6 g');
+  ok(riegel.ca === true, 'Fehlende Nährwerte (Eiweiß, Kohlenhydrate) werden als "ca." gekennzeichnet');
+
+  // ===== 8. Tage blättern =====
+  await klick('◀', 400);
+  ok(text().includes('Gestern') && text().includes('Für diesen Tag steht noch nichts') && doc().querySelector('.summe-gross').textContent.startsWith('0'), 'Gestern: leer, 0 kcal');
+  await eintragen('✏️ Frei eintippen');
+  tippe(feld('Name'), 'Abendbrot gestern'); tippe(feld('Kalorien'), '500');
+  await klick('Eintragen', 500);
+  t = await tagebuchDB();
+  const gestern = verschiebeTag(heute, -1);
+  const gEintrag = t.find((e) => e.name === 'Abendbrot gestern');
+  ok(gEintrag && gEintrag.tag === gestern && tagVon(new Date(gEintrag.zeit)) === gestern, 'Eintrag für gestern hat gestern als Tag');
+  ok(text().includes('Abendbrot gestern') && doc().querySelector('.summe-gross').textContent.startsWith('500'), 'Gestern zeigt 500 kcal');
+  await klick('▶', 400);
+  ok(text().includes('Heute') && !text().includes('Abendbrot gestern') && knopf('▶').disabled, 'Heute zeigt den Eintrag von gestern nicht, Zukunft gesperrt');
+
+  // ===== 9. Sicherung =====
+  const s = await erstelleSicherung();
+  ok(s.anzahlTagebuch === t.length && JSON.parse(s.text).daten.tagebuch.length === t.length, 'Sicherung enthält ' + t.length + ' Tagebucheinträge');
+  ok(JSON.parse(s.text).daten.einstellungen.some((e) => e.key === 'profil' && e.value.tagesziel.kcal === 2000), 'Körperdaten und Tagesziel sind in der Sicherung');
+  const daten = async () => ohneLeer({ t: await tagebuchDB(), p: await profilDB(), pr: (await alle('produkte')).sort((a, b) => a.barcode.localeCompare(b.barcode)) });
+  const vorSich = await daten();
+  await new Promise((r) => { const q = indexedDB.open('koch-app'); q.onsuccess = () => { const tx = q.result.transaction(['tagebuch', 'einstellungen'], 'readwrite'); tx.objectStore('tagebuch').clear(); tx.objectStore('einstellungen').delete('profil'); tx.oncomplete = () => { q.result.close(); r(); }; }; });
+  await stelleWiederHer(liesSicherung(s.text));
+  ok((await daten()) === vorSich, 'Einspielen stellt Tagebuch, Körperdaten und Produkte genau wieder her');
+  await seite('#/einstellungen');
+  const dateiFeld = doc().querySelector('input[type=file]'); const dt = new DataTransfer(); dt.items.add(new File([s.text], 's.json', { type: 'application/json' })); dateiFeld.files = dt.files; dateiFeld.dispatchEvent(new Event('change'));
+  await warte(600);
+  ok(text().includes(t.length + ' Tagebucheinträge'), 'Rückfrage beim Einspielen nennt die Tagebucheinträge');
+  await klick('Abbrechen', 300);
+
+  // ===== 10. Layout =====
+  await seite('#/tagebuch');
+  ok(!/null|undefined|NaN|\[object/.test(text()), 'Tagebuch: kein "null", "undefined", "NaN" oder "[object" sichtbar');
+  ok(doc().documentElement.scrollWidth <= 390, 'Tagebuch: kein seitliches Scrollen (' + doc().documentElement.scrollWidth + ')');
+  const hoehe = knopf('＋ Eintragen').getBoundingClientRect().height;
+  ok(hoehe >= 60, 'Großer Eintragen-Knopf (' + Math.round(hoehe) + ' px)');
+  await seite('#/einstellungen'); await klick('🎯 Körperdaten und Tagesziel', 500);
+  ok(!/null|undefined|NaN|\[object/.test(text()) && doc().documentElement.scrollWidth <= 390, 'Tagesziel-Maske: sauber, kein seitliches Scrollen (' + doc().documentElement.scrollWidth + ')');
+  await seite('#/tagebuch');
+  log('FERTIG');
+}
+lauf().catch((e) => { log('FAIL Fehler: ' + e.message + ' | ' + (e.stack || '').split('\n')[1]); log('FERTIG'); });
+</script>

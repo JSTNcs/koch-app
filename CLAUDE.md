@@ -36,11 +36,12 @@ Der Nutzer hat keine Programmiererfahrung: Antworten auf Deutsch, einfach erklä
   Die Zutat im Rezept ist der allgemeine Name aus der eingebauten Zutatenliste (`js/zutaten.js`, rund 100 Zutaten mit Synonymen).
   Produkte, Vorratseinträge und Listeneinträge haben ein Feld **Zutat** (Vorschlag der App aus dem Namen, vom Nutzer korrigierbar).
   So findet "Spaghetti" im Rezept jede Marke im Vorrat. Gewürze, Öl, Salz: nur da/leer, ohne Eintrag im Vorrat gelten sie als vorhanden.
-- **Mahlzeit:** Datum, Rezept oder Produkt, gegessene Menge/Portion, Nährwerte
+- **Mahlzeit** (Tagebucheintrag, Tabelle `tagebuch`): Tag, Zeit, Mahlzeit (Frühstück, Mittag, Abend, Snack), Name, Menge, Nährwerte für den ganzen
+  Eintrag (kcal, Eiweiß, Kohlenhydrate, Fett), `ca` = Näherung, Quelle (frei, produkt, vorrat, rezept, rest)
 - **Rest:** Rezept, Portionen übrig, gekocht am (Tabelle `reste`, im Vorrat-Tab als Bereich "Reste")
 - **Kochprotokoll:** Datum, Rezept, Portionen gesamt/gegessen, Rest, Vorratseinträge vor dem Abzug (Tabelle `gekocht`, für "Rückgängig";
   Phase 5 macht aus den gegessenen Portionen Tagebuch-Einträge)
-- **Einstellungen:** Körperdaten für das Tagesziel, Tagesziel, letzte Sicherung
+- **Einstellungen:** Körperdaten für das Tagesziel, Tagesziel (Schlüssel `profil`), letzte Sicherung. Körperdaten stehen auch in der Sicherungsdatei.
 
 ## Mengen-Regel (entschieden)
 - Gramm, Milliliter oder Stück für alles, was ein Rezept abmisst (Nudeln, Fleisch, Milch, Eier).
@@ -69,6 +70,9 @@ Der Nutzer hat keine Programmiererfahrung: Antworten auf Deutsch, einfach erklä
 - Berechnung aus den Daten des Nutzers (Alter, Größe, Gewicht, Aktivität, Ziel) mit einer
   anerkannten Formel (z. B. Mifflin-St-Jeor) und Aktivitätsfaktor. Formel in der App erklären.
 - Der Nutzer kann das Ziel von Hand anpassen.
+- Umgesetzt (`js/tagesziel.js`): Mifflin-St-Jeor (Konstante +5 Mann, −161 Frau, −78 keine Angabe), Aktivitätsfaktoren 1,2 bis 1,9,
+  Ziele halten / langsam abnehmen (15 % weniger, höchstens 500 kcal, nie unter dem Grundumsatz) / langsam zunehmen (10 % mehr), unter 18 nur Halten
+  mit Hinweis. Eiweiß 1,4 g pro kg, Fett 30 % der Kalorien, Kohlenhydrate der Rest. Alle vier Zahlen sind von Hand änderbar.
 - Keine extremen Vorgaben: Das vorgeschlagene Ziel liegt nie unter dem berechneten Grundumsatz,
   ein Defizit bleibt moderat. Die App bewertet Essen nicht moralisch („gut/schlecht“), sie zeigt Zahlen.
 
