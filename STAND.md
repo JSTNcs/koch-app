@@ -1,8 +1,7 @@
 # Stand
 
-**Phase 1 bis 4 und Phase 5, Teil 1 (Tagesziel und Tagebuch) sind abgeschlossen und am iPhone getestet. Phase 5, Teil 2 (Nährwerte für Rezepte,
-Kochen und Reste ins Tagebuch) ist gebaut und online (Version v10), der Test am echten iPhone steht noch aus.** Danach: Phase 6 (Feinschliff).
-Vorher Plan zeigen und OK abwarten.
+**Phase 1 bis 5 sind abgeschlossen und am iPhone getestet** (Version v10; Phase 5 = Tagesziel, Tagebuch und Nährwerte).
+Nächste Phase: 6 (Feinschliff: Ablaufdatum-Hinweise und Design). Der Plan wird gerade mit dem Nutzer besprochen, vorher nichts bauen.
 
 ## Wo läuft was
 - App im Netz: https://jstncs.github.io/koch-app/ (GitHub Pages, Zweig `main`, Ordner `/`)
@@ -120,8 +119,7 @@ Vorher Plan zeigen und OK abwarten.
   Rückgängig); Essen aus dem Vorrat zieht ab (mit Haken zum Abwählen).
 
 ## Offen / Bekanntes
-- Phase 5, Teil 2: Test am iPhone (Rezeptansicht mit „ca. … kcal pro Portion", Kochen mit Tagebuch-Haken und Rückgängig, Rest essen mit Rückgängig, Tabellen-Vorschläge
-  im Tagebuch).
+- Nichts offen aus Phase 1 bis 5.
 - Nährwerte sind Näherungen: USDA-Werte sind amerikanische Durchschnittswerte, Marken weichen ab (z. B. Quark 20 % ist durch Hüttenkäse 2 % angenähert, Sahne durch
   „light whipping", Hackfleisch durch 80/20), Garverluste und Öl in der Pfanne sind nicht erfasst. Stückgewichte sind Richtwerte.
 - Hinweis: Ändert man ein Startrezept in `tools/baue-startpaket.mjs`, danach `node tools/baue-startpaket.mjs` ausführen (der Plausibilitätstest rechnet die Rezepte durch).
