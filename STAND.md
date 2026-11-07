@@ -1,7 +1,7 @@
 # Stand
 
-**Phase 1, 2 und 3 sind abgeschlossen und am iPhone getestet. Phase 4 (Kochen-Modus mit Abziehen und Resten) ist gebaut und
-online (Version v8), der Test am echten iPhone steht noch aus.** Danach: Phase 5 (Tagebuch und Tagesziel). Vorher Plan zeigen und OK abwarten.
+**Phase 1 bis 4 sind abgeschlossen und am iPhone getestet** (Version v8, Phase 4 = Kochen-Modus mit Abziehen und Resten).
+Nächste Phase: 5 (Tagebuch und Tagesziel). Der Plan wird gerade mit dem Nutzer besprochen, vorher nichts bauen.
 
 ## Wo läuft was
 - App im Netz: https://jstncs.github.io/koch-app/ (GitHub Pages, Zweig `main`, Ordner `/`)
@@ -90,8 +90,7 @@ online (Version v8), der Test am echten iPhone steht noch aus.** Danach: Phase 5
 - Zutaten im Rezept in EL/TL/Prise gibt es nicht: Gewürze „nach Bedarf" (Menge als Hinweis), gemessene Zutaten rechnet der Import ungefähr um.
 
 ## Offen / Bekanntes
-- Phase 4: Test am iPhone (Kochen von Anfang bis Ende, Fortsetzen nach App-Wechsel, Abzug mit zwei Packungen, Rest essen, Rückgängig).
-- Wake Lock (Bildschirm bleibt an) ist nur im Browser-Test mit Ersatzverhalten geprüft, ob es am iPhone klappt, zeigt der Test dort.
+- Nichts offen aus Phase 1 bis 4.
 - Echter Link-Import noch nicht an einer echten Seite geprüft; manche Seiten blockieren Programme (dann Text oder Foto an Claude Code).
 - Einheiten werden nicht umgerechnet (Zwiebel in Stück gegen kg im Vorrat: „unklar"). Möglich später: Gewichte pro Stück je Zutat.
 - Design bewusst schlicht, kommt in Phase 6. Bei vielen Rezepten ist die Gruppe „1–2 fehlen" lang; Sortierung nach ablaufenden Zutaten kommt in Phase 6.
