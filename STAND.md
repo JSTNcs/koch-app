@@ -1,7 +1,8 @@
 # Stand
 
-**Phase 1 bis 5 sind abgeschlossen und am iPhone getestet** (Version v10; Phase 5 = Tagesziel, Tagebuch und Nährwerte).
-Nächste Phase: 6 (Feinschliff: Ablaufdatum-Hinweise und Design). Der Plan wird gerade mit dem Nutzer besprochen, vorher nichts bauen.
+**Phase 1 bis 5 sind abgeschlossen und am iPhone getestet** (Version v10).
+**Phase 6 Teil 1 (Funktionen) ist gebaut, getestet und veröffentlicht (Version v11), der Test am iPhone steht noch aus.**
+Danach folgt Phase 6 Teil 2 (Design „Dunkel und modern"): erst Plan zeigen und OK abwarten, vorher nichts bauen.
 
 ## Wo läuft was
 - App im Netz: https://jstncs.github.io/koch-app/ (GitHub Pages, Zweig `main`, Ordner `/`)
@@ -60,6 +61,20 @@ Nächste Phase: 6 (Feinschliff: Ablaufdatum-Hinweise und Design). Der Plan wird 
   - Tagebuch aus dem Vorrat und per Scan: Hat das Produkt keine eigenen Nährwerte, schlägt die Tabelle sie über die Zutat vor (pro 100 g/ml bzw. pro Stück, mit
     Hinweis). Werte unverändert übernommen: Eintrag als „ca.", das Produkt bekommt keine eigenen Daten. Eigene Zahlen werden beim Produkt gemerkt.
   - Unter Mehr steht die Quelle der Tabelle.
+- **Phase 6 Teil 1 (Feinschliff, Funktionen):**
+  - **Ablaufdatum** (`js/ablauf.js`, Schwelle `BALD_TAGE` = 3): Im Vorrat ein Hinweis „Bald ablaufend oder überschritten (N)" mit Namen und „heute/morgen/in N Tagen"
+    und Knopf „Rezepte dafür ansehen"; die Karte zeigt „läuft morgen ab" bzw. „Datum gestern überschritten (prüfe selbst)". Beim Datum drei Schnellknöpfe
+    (+3 Tage, +1 Woche, +1 Monat), im Vorrat- und im Scan-Formular. „Was koche ich?" und die Kochen-Auswahl sortieren innerhalb der Gruppen nach dem
+    am ehesten ablaufenden Vorrat, die Karte zeigt „Verbraucht: Milch (morgen)", die Rezeptansicht „Milch: läuft morgen ab."
+  - **Einheiten umrechnen** (`js/einheiten.js`): Stück ↔ g/ml über Stückgewicht und Dichte der Nährwert-Tabelle (Richtwerte). Rezept „1 Zwiebel" gegen Vorrat „1 kg"
+    zählt jetzt als da („umgerechnet"); beim Kochen wird der Abzug umgerechnet vorgeschlagen („ca.", änderbar). Ohne Tabelleneintrag bleibt es „unklar".
+  - **Leer auf die Einkaufsliste** (`js/leer.js`): Vorratseinträge mit Menge 0 oder `da_leer`=leer zeigen „Leer"/„Fast leer" mit Knopf „🛒 Auf die Liste"
+    (Produkt mit Marke oder Freitext mit Zutat, nichts doppelt, „↩ Rückgängig").
+  - **Timer in den Kochschritten** (`js/timer.js`): Zeiten im Schrittext („10 Minuten", „2–3 Std.") werden erkannt (höchstens 3), Knopf „⏱ Timer X starten", große Restzeit,
+    „Stopp"; die Endzeit steht im Kochstand (übersteht App-Wechsel und Neuladen), Ton nur wenn die App offen ist (iPhone-Beschränkung), Bildschirm bleibt an.
+  - **Hinweis bei neuer App-Version** (`js/app.js`, `sw.js`): Der Service Worker wartet nach einer Veröffentlichung; oben erscheint „Neue Version verfügbar" mit
+    „Jetzt aktualisieren" (Umschalten und Neuladen erst nach dem Tipp). Die App sucht beim Start und beim Zurückkehren in die App nach Updates.
+    Wichtig für den Umstieg v10 → v11: App einmal ganz schließen und neu öffnen (v10 kennt den Hinweis noch nicht); ab v11 erscheint der Hinweis.
 - **Rezepte verwalten** (Mehr > „📖 Rezepte verwalten"): eintippen und ändern (Zutatenvorschläge, Einheit passend zur Zutat), löschen,
   **Startpaket** (28 Alltagsrezepte für 2 Portionen, gemischt mit Fleisch und Fisch, eigene Texte, `daten/startpaket.json`),
   **Rezeptdatei** einlesen (Rückfrage: was ist neu, was wird ersetzt; gleiche Kennung ersetzt).
@@ -75,7 +90,7 @@ Nächste Phase: 6 (Feinschliff: Ablaufdatum-Hinweise und Design). Der Plan wird 
 
 ## Wie der Code aufgebaut ist
 - Kein Build-Schritt. `index.html` lädt `js/app.js`; Bildschirme in `js/screens/`, Routen in `js/routes.js`.
-- Reine Logik (gut testbar): `js/tagesziel.js` (Grundumsatz, Vorschlag, Rechenweg), `js/tagebuch.js` (Einträge, Tage, Summen, Abziehen, zuletzt gegessen), `js/naehrwerte.js`, `js/pantry.js` (Vorrat), `js/produkt.js` (Produkte, Open-Food-Facts-Antwort, Gruppen), `js/einkauf.js`
+- Reine Logik (gut testbar): `js/ablauf.js`, `js/einheiten.js`, `js/leer.js`, `js/timer.js` (Phase 6), `js/tagesziel.js` (Grundumsatz, Vorschlag, Rechenweg), `js/tagebuch.js` (Einträge, Tage, Summen, Abziehen, zuletzt gegessen), `js/naehrwerte.js`, `js/pantry.js` (Vorrat), `js/produkt.js` (Produkte, Open-Food-Facts-Antwort, Gruppen), `js/einkauf.js`
   (Liste, Zuordnung beim Scan), `js/zutaten.js` (Zutatenliste mit 99 Zutaten, Vorschlag), `js/rezepte.js` (Rezepte, Abgleich, Dateiformat),
   `js/kochen.js` (Abzug, Reste, Protokoll, Rückgängig), `js/barcode.js`, `js/backup.js`.
 - Mit Browser verbunden: `js/db.js` (IndexedDB Version 5: `vorrat`, `produkte`, `einkauf`, `rezepte`, `reste`, `gekocht`, `tagebuch`, `einstellungen`; `schreibeAlles` schreibt
@@ -86,11 +101,11 @@ Nächste Phase: 6 (Feinschliff: Ablaufdatum-Hinweise und Design). Der Plan wird 
 - Bibliotheken lokal in `lib/` (MIT und Apache-2.0, siehe `lib/README.md`).
 
 ## Tests
-- `npm test`: 277 Logik-Tests im Ordner `tests/` (Node, keine Installation nötig).
+- `npm test`: 320 Logik-Tests im Ordner `tests/` (Node, keine Installation nötig).
 - Browser-Tests im Handy-Format (390 px): `python -m http.server 8080` im Projektordner starten, dann
   `node tools/browser-test.mjs tools/<seite>.html [bild.png]` mit `browser-test.html` (Vorrat, 12 Prüfungen), `scan-test.html` (Scan, 26,
   braucht Internet), `backup-test.html` (Sicherung, 28), `einkauf-test.html` (Einkaufsliste, 60), `rezepte-test.html` (Rezepte, 61, inkl.
-  Umstellung der Datenbank von Version 2 auf 3), `kochen-test.html` (Kochen, 57, inkl. Umstellung von Version 3 auf 4), `tagebuch-test.html` (Tagesziel und Tagebuch, 63, inkl. Umstellung von Version 4 auf 5), `naehrwerte-test.html` (Nährwerte, Kochen und Reste ins Tagebuch, 30). Das Skript startet Edge unsichtbar und beendet ihn selbst. Danach den Testserver beenden.
+  Umstellung der Datenbank von Version 2 auf 3), `kochen-test.html` (Kochen, 57, inkl. Umstellung von Version 3 auf 4), `tagebuch-test.html` (Tagesziel und Tagebuch, 63, inkl. Umstellung von Version 4 auf 5), `naehrwerte-test.html` (Nährwerte, Kochen und Reste ins Tagebuch, 30), `ablauf-test.html` (Phase 6: Ablauf, Umrechnung, Leer, Timer, 39; `kochen-test` hat 58). Dazu `node tools/update-test.mjs` (Hinweis bei neuer Version mit echtem Versionswechsel, 11, braucht keinen Server). Das Skript startet Edge unsichtbar und beendet ihn selbst. Danach den Testserver beenden.
 - Die Browser-Tests greifen Formularfelder nach Position an: Wird ein Feld in einem Formular eingefügt, die Positionen anpassen.
 
 ## So veröffentlichst du eine Änderung
@@ -109,7 +124,7 @@ Nächste Phase: 6 (Feinschliff: Ablaufdatum-Hinweise und Design). Der Plan wird 
   Startpaket gemischt mit Fleisch und Fisch, für 2 Portionen; Rezepte werden unter „Mehr" verwaltet, „Was koche ich?" ist der Tab.
 - Phase 4 (mit dem Nutzer entschieden): beim Abzug bald ablaufende Einträge zuerst, dann die angebrochene (kleinere Menge); leer gewordene Einträge
   werden automatisch entfernt (mit „Rückgängig" zurückholbar); Kochen ist auch bei fehlenden Zutaten erlaubt (Hinweis). Reste stehen als eigener
-  Bereich oben im Vorrat. Keine Timer in den Schritten (Idee für später).
+  Bereich oben im Vorrat. Timer in den Schritten kamen in Phase 6.
 - Zutaten im Rezept in EL/TL/Prise gibt es nicht: Gewürze „nach Bedarf" (Menge als Hinweis), gemessene Zutaten rechnet der Import ungefähr um.
 
 - Phase 5, Teil 2 wie entschieden umgesetzt (USDA-Tabelle plus eigene Produktdaten, automatischer Tagebucheintrag mit Haken und Rückgängig). Ein Plausibilitätstest rechnet
@@ -124,8 +139,8 @@ Nächste Phase: 6 (Feinschliff: Ablaufdatum-Hinweise und Design). Der Plan wird 
   „light whipping", Hackfleisch durch 80/20), Garverluste und Öl in der Pfanne sind nicht erfasst. Stückgewichte sind Richtwerte.
 - Hinweis: Ändert man ein Startrezept in `tools/baue-startpaket.mjs`, danach `node tools/baue-startpaket.mjs` ausführen (der Plausibilitätstest rechnet die Rezepte durch).
 - Echter Link-Import noch nicht an einer echten Seite geprüft; manche Seiten blockieren Programme (dann Text oder Foto an Claude Code).
-- Einheiten werden nicht umgerechnet (Zwiebel in Stück gegen kg im Vorrat: „unklar"). Möglich später: Gewichte pro Stück je Zutat.
-- Design bewusst schlicht, kommt in Phase 6. Bei vielen Rezepten ist die Gruppe „1–2 fehlen" lang; Sortierung nach ablaufenden Zutaten kommt in Phase 6.
+- Einheiten: Umrechnung nur über Stückgewicht und Dichte der Tabelle (Richtwerte, „ca."). Zutaten ohne Tabelleneintrag oder EL/TL bleiben „unklar".
+- Timer-Ton gibt es nur bei geöffneter App (iPhone-Beschränkung für Web-Apps, keine Benachrichtigung im Hintergrund).
+- Design bewusst schlicht, kommt in Phase 6 Teil 2 (Dunkel und modern: zentrale Farben/Variablen, eigene Symbole statt Emojis, neues App-Symbol).
 - Open-Food-Facts-Daten sind nicht immer vollständig; dann im Prüf-Formular ergänzen.
 - Daten liegen nur im Browser-Speicher des iPhones: regelmäßig sichern (Datei z. B. in iCloud Drive).
-- Idee für später: leere Vorräte direkt „auf die Liste".

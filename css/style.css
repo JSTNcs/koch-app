@@ -243,3 +243,15 @@ button.gross { min-height: 64px; font-size: 20px; }
 .makro-kopf { display: flex; justify-content: space-between; font-size: 16px; }
 button.eintrag-knopf { display: flex; align-items: center; justify-content: space-between; text-align: left; margin-bottom: 8px; gap: 8px; }
 button.eintrag-knopf .texte .titel { color: var(--text); }
+
+/* Phase 6, Teil 1: Ablauf-Hinweise, Timer, Update-Hinweis */
+.ablauf-bald { color: #b26a00; font-weight: 600; }
+.ablauf-abgelaufen { color: var(--rot); font-weight: 600; }
+.timer-leiste { display: flex; align-items: center; gap: 12px; background: var(--gruen-hell); border-radius: 12px; padding: 10px 14px; margin: 8px 0; }
+.timer-leiste.fertig { background: #fff4e5; }
+.timer-zeit { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.timer-leiste .menge { flex: 1 1 auto; }
+button.breit { min-width: 84px; }
+.update-banner { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #fff4e5; padding: 10px 16px; border-bottom: 1px solid var(--linie); }
+.update-banner[hidden] { display: none; }
+.update-banner button { min-height: 44px; padding: 8px 14px; }

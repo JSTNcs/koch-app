@@ -1,0 +1,161 @@
+<!doctype html>
+<!-- Prüft Phase 6 Teil 1: Ablaufdatum-Hinweise (Vorrat, Vorschlags-Reihenfolge), Schnellknöpfe fürs Datum, Einheiten umrechnen,
+     Timer in den Kochschritten (auch nach Neuladen), leere Vorräte auf die Einkaufsliste.
+     Aufruf: node tools/browser-test.mjs tools/ablauf-test.html -->
+<meta charset="utf-8">
+<body style="margin:0;background:#888">
+<pre id="out" style="position:fixed;right:0;top:0;width:300px;background:#fff;font-size:11px;margin:0;padding:4px;z-index:99"></pre>
+<iframe id="app" style="width:390px;height:780px;border:0;background:#fff;display:block;margin:10px"></iframe>
+<script type="module">
+import { alle, speichere } from '../js/db.js';
+import { neuesRezept } from '../js/rezepte.js';
+import { neuerEintrag, setzeDa } from '../js/pantry.js';
+import { neuesProdukt } from '../js/produkt.js';
+import { datumInTagen, datumInMonaten } from '../js/ablauf.js';
+
+const out = document.getElementById('out');
+const log = (s) => (out.textContent += s + '\n');
+const ok = (b, t) => log((b ? 'PASS ' : 'FAIL ') + t);
+const warte = (ms) => new Promise((r) => setTimeout(r, ms));
+const frame = document.getElementById('app');
+const doc = () => frame.contentDocument;
+const text = () => doc().body.innerText;
+const knopf = (s) => [...doc().querySelectorAll('button')].find((b) => b.textContent.trim().startsWith(s));
+const klick = async (s, ms = 400) => { const k = knopf(s); if (!k) throw new Error('Knopf fehlt: ' + s + ' | Sichtbar: ' + text().slice(0, 300)); k.click(); await warte(ms); };
+const tippe = (el, w) => { el.value = w; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); };
+const feld = (label) => doc().querySelector(`[aria-label="${label}"]`);
+async function bis(f, ms = 8000) { const t = Date.now(); while (Date.now() - t < ms) { if (f()) return true; await warte(120); } return false; }
+const karte = (name) => [...doc().querySelectorAll('.rezeptkarte')].find((k) => k.querySelector('.titel').textContent === name);
+const eintrag = async (id) => (await alle('vorrat')).find((e) => e.id === id);
+const kochstand = async () => (await alle('einstellungen')).find((e) => e.key === 'kochen')?.value ?? null;
+
+async function seite(hash) {
+  const geladen = new Promise((r) => (frame.onload = r));
+  if (frame.contentWindow.location.href.includes('index.html')) { frame.contentWindow.location.hash = hash; frame.contentWindow.location.reload(); }
+  else frame.src = '../index.html' + hash;
+  await geladen;
+  await bis(() => doc().querySelector('#screen')?.children.length, 10000);
+  frame.contentWindow.confirm = () => true;
+  await warte(300);
+}
+
+async function lauf() {
+  await new Promise((r) => { const q = indexedDB.deleteDatabase('koch-app'); q.onsuccess = q.onerror = q.onblocked = r; });
+  const heute = new Date();
+
+  // ===== Daten =====
+  const E = (id, name, menge, einheit, o = {}) => speichere('vorrat', neuerEintrag({ name, art: 'menge', menge, einheit, ...o }, { id }));
+  await E('milch', 'Milch', 500, 'ml', { ablauf: datumInTagen(1) });
+  await E('brot', 'Brot', 3, 'stk', { ablauf: datumInTagen(-1) });
+  await E('joghurt', 'Joghurt Natur', 150, 'g', { ablauf: datumInTagen(10) });
+  await E('spaghetti', 'Spaghetti', 500, 'g');
+  await E('zwiebeln', 'Zwiebeln', 1000, 'g');
+  const R = (id, name, zutaten, schritte = ['Fertig machen.']) => speichere('rezepte', neuesRezept({ id, name, portionen: 2, zutaten, schritte }));
+  await R('milchreis', 'Zimt-Milchreis', [{ zutat: 'Milch', menge: 200, einheit: 'ml' }]);
+  await R('nudeln', 'Apfelmus-Nudeln', [{ zutat: 'Spaghetti', menge: 200, einheit: 'g' }]);
+  await R('toast', 'Toast-Auflauf', [{ zutat: 'Brot', menge: 2, einheit: 'stk' }]);
+  await R('suppe', 'Zwiebelsuppe', [{ zutat: 'Zwiebeln', menge: 2, einheit: 'stk' }], ['Zwiebeln schneiden.', 'Kurz 2 Sekunden warten.', 'Dann 10 Minuten ziehen lassen.']);
+
+  // ===== 1. Ablauf im Vorrat =====
+  await seite('#/vorrat');
+  ok(text().includes('Bald ablaufend oder überschritten (2)') && text().includes('Brot (überschritten)') && text().includes('Milch (morgen)'), 'Vorrat: Banner "Bald ablaufend oder überschritten (2)" mit Brot und Milch');
+  ok(!text().includes('Joghurt Natur (') && !!knopf('Rezepte dafür ansehen'), 'Joghurt (erst in 10 Tagen) steht nicht im Banner');
+  const karteVon = (name) => [...doc().querySelectorAll('.eintrag')].find((x) => x.querySelector('.name')?.textContent === name);
+  ok(karteVon('Milch').textContent.includes('läuft morgen ab') && karteVon('Milch').querySelector('.ablauf-bald'), 'Milch: "läuft morgen ab" in Warnfarbe');
+  ok(karteVon('Brot').textContent.includes('Datum gestern überschritten (prüfe selbst)') && karteVon('Brot').querySelector('.ablauf-abgelaufen'), 'Brot: "Datum gestern überschritten (prüfe selbst)", neutral formuliert');
+  ok(/Haltbar bis \d\d\.\d\d\.\d{4}/.test(karteVon('Joghurt Natur').textContent) && !karteVon('Joghurt Natur').querySelector('.ablauf-bald'), 'Joghurt: normale Anzeige "Haltbar bis …"');
+  ok(!karteVon('Spaghetti').textContent.includes('Haltbar') && !karteVon('Spaghetti').textContent.includes('läuft'), 'Ohne Datum steht nichts');
+
+  // ===== 2. Schnellknöpfe fürs Datum =====
+  await klick('＋ Von Hand', 400);
+  ok(!!knopf('+3 Tage') && !!knopf('+1 Woche') && !!knopf('+1 Monat'), 'Schnellknöpfe "+3 Tage", "+1 Woche", "+1 Monat" im Formular');
+  const datum = () => doc().querySelector('input[type=date]');
+  await klick('+3 Tage', 150);
+  ok(datum().value === datumInTagen(3, heute), '+3 Tage setzt ' + datumInTagen(3, heute));
+  await klick('+1 Woche', 150);
+  ok(datum().value === datumInTagen(7, heute), '+1 Woche setzt ' + datumInTagen(7, heute));
+  await klick('+1 Monat', 150);
+  ok(datum().value === datumInMonaten(1, heute), '+1 Monat setzt ' + datumInMonaten(1, heute));
+  tippe(doc().querySelector('input[type=text]'), 'Schnelltest-Käse'); tippe(doc().querySelectorAll('input[type=text]')[2], '200');
+  await klick('Speichern', 500);
+  ok((await alle('vorrat')).find((e) => e.name === 'Schnelltest-Käse')?.ablauf === datumInMonaten(1, heute), 'Gespeichert mit dem Datum vom Schnellknopf');
+
+  // ===== 3. Vorschläge: bald ablaufende Zutaten zuerst =====
+  await seite('#/rezepte');
+  const alles = () => { const ul = [...doc().querySelectorAll('h2')].find((x) => x.textContent.startsWith('✔ Alles da'))?.nextElementSibling; return ul ? [...ul.querySelectorAll('.titel')].map((x) => x.textContent) : []; };
+  ok(JSON.stringify(alles()) === JSON.stringify(['Toast-Auflauf', 'Zimt-Milchreis', 'Apfelmus-Nudeln', 'Zwiebelsuppe']), 'Reihenfolge: Toast-Auflauf (Brot überschritten), Zimt-Milchreis (Milch morgen), dann die anderen nach Name. Ist: ' + alles().join(', '));
+  ok(karte('Zimt-Milchreis').textContent.includes('Verbraucht: Milch (morgen)') && karte('Toast-Auflauf').textContent.includes('Verbraucht: Brot (überschritten)'), 'Karten nennen: "Verbraucht: Milch (morgen)"');
+  ok(!karte('Apfelmus-Nudeln').textContent.includes('Verbraucht'), 'Rezept ohne bald ablaufende Zutat: kein Hinweis');
+  karte('Zimt-Milchreis').click(); await warte(450);
+  ok(text().includes('Milch: läuft morgen ab.'), 'Rezeptansicht: Zutat Milch mit "läuft morgen ab"');
+  await klick('← Zurück', 300);
+
+  // ===== 4. Einheiten umrechnen =====
+  ok(alles().includes('Zwiebelsuppe'), '"2 Zwiebeln" gegen "1 kg Zwiebeln": Zwiebelsuppe gilt als "Alles da"');
+  karte('Zwiebelsuppe').click(); await warte(450);
+  ok(text().includes('Du hast 11,11 Stück (umgerechnet).'), 'Rezeptansicht: "Du hast 11,11 Stück (umgerechnet)."');
+  await klick('← Zurück', 300);
+
+  // ===== 5. Kochen: Umrechnung beim Abziehen, Timer =====
+  await seite('#/kochen');
+  karte('Zwiebelsuppe').click(); await warte(350);
+  await klick('🍳 Los geht', 450);
+  await klick('Weiter: erster Schritt', 450);
+  ok(text().includes('Schritt 1 von 3') && !text().includes('Timer'), 'Schritt 1 ohne Zeitangabe: kein Timer-Knopf');
+  await klick('Weiter →', 450);
+  ok(text().includes('Schritt 2 von 3') && !!knopf('⏱ Timer 2 Sek. starten'), 'Schritt 2 "2 Sekunden": Knopf "⏱ Timer 2 Sek. starten"');
+  await klick('⏱ Timer 2 Sek. starten', 500);
+  ok(!!doc().querySelector('.timer-leiste') && /^[0-2]:0[0-2]$/.test(doc().querySelector('.timer-zeit').textContent.trim()), 'Timer läuft und zeigt die Restzeit (' + doc().querySelector('.timer-zeit')?.textContent + ')');
+  ok((await kochstand()).timer?.sekunden === 2, 'Der Timer ist im Kochstand gespeichert');
+  ok(await bis(() => doc().querySelector('.timer-zeit')?.textContent === 'Zeit ist um!', 6000), 'Nach 2 Sekunden: "Zeit ist um!"');
+  ok(doc().querySelector('.timer-leiste.fertig') && (await kochstand()).timer.klingelte === true, 'Leiste ist als fertig markiert, das Klingeln ist gemerkt');
+  await klick('Stopp', 400);
+  ok(!doc().querySelector('.timer-leiste') && !(await kochstand()).timer, 'Stopp entfernt den Timer');
+  await klick('Weiter →', 450);
+  ok(text().includes('Schritt 3 von 3') && !!knopf('⏱ Timer 10 Min. starten'), 'Schritt 3 "10 Minuten": Knopf "⏱ Timer 10 Min. starten"');
+  await klick('⏱ Timer 10 Min. starten', 400);
+  const zeit1 = doc().querySelector('.timer-zeit').textContent.trim();
+  ok(/^(10:00|9:5\d)$/.test(zeit1), 'Timer zeigt ' + zeit1);
+  await warte(1600); // etwas Zeit vergehen lassen, dann wie nach einem Wechsel in eine andere App neu laden
+  await seite('#/kochen');
+  const zeit2 = doc().querySelector('.timer-zeit')?.textContent.trim();
+  ok(text().includes('Schritt 3 von 3') && /^9:\d\d$/.test(zeit2), 'Nach dem Neuladen läuft der Timer weiter (' + zeit2 + ')');
+  await klick('Stopp', 400);
+  await klick('Fertig gekocht ✔', 450);
+  await klick('Weiter: Vorrat anpassen', 450);
+  ok(feld('Menge Zwiebeln').value === '180' && text().includes('Rezept: 2 Stück') && text().includes('Umgerechnet'), 'Abziehen: "2 Stück" werden als 180 g vorgeschlagen (umgerechnet), Menge änderbar');
+  ok(text().includes('Zwiebeln: 1 kg → 820 g'), 'Zwiebeln: 1 kg → 820 g');
+  await klick('✔ Vorrat anpassen', 800);
+  ok((await eintrag('zwiebeln')).menge === 820, 'Vorrat: 1000 g -> 820 g');
+  await klick('↩ Rückgängig', 800);
+  ok((await eintrag('zwiebeln')).menge === 1000, 'Rückgängig: wieder 1000 g');
+
+  // ===== 6. Leer und fast leer -> Einkaufsliste =====
+  await speichere('produkte', neuesProdukt({ barcode: '4006381333931', name: 'Joghurt Natur', art: 'menge', packung: 500, einheit: 'g' }));
+  await E('joghurt', 'Joghurt Natur', 99, 'g', { barcode: '4006381333931', ablauf: datumInTagen(10) });
+  await E('mehl', 'Mehl', 0, 'g', { zutat: 'Mehl' });
+  await speichere('vorrat', setzeDa(neuerEintrag({ name: 'Salz', art: 'da_leer' }, { id: 'salz' }), false));
+  await seite('#/vorrat');
+  ok(karteVon('Joghurt Natur').textContent.includes('Fast leer') && karteVon('Mehl').textContent.includes('Leer') && !!karteVon('Milch') && !karteVon('Milch').textContent.includes('Auf die Liste'), '"Fast leer" und "Leer" werden angezeigt, volle Einträge haben keinen Listen-Knopf');
+  const listenKnopf = (name) => [...karteVon(name).querySelectorAll('button')].find((b) => b.textContent.includes('Auf die Liste'));
+  listenKnopf('Joghurt Natur').click(); await warte(500);
+  let liste = await alle('einkauf');
+  ok(liste.length === 1 && liste[0].typ === 'produkt' && liste[0].barcode === '4006381333931' && liste[0].anzahl === 1 && text().includes('✔ Joghurt Natur steht jetzt auf der Einkaufsliste'), 'Joghurt: als Produkt (1×) auf der Liste, mit Bestätigung');
+  listenKnopf('Joghurt Natur').click(); await warte(500);
+  liste = await alle('einkauf');
+  ok(liste.length === 1 && liste[0].anzahl === 1 && text().includes('steht schon auf der Einkaufsliste'), 'Nochmal: steht schon drauf, nichts doppelt, Anzahl bleibt 1');
+  listenKnopf('Mehl').click(); await warte(500);
+  const mehl = (await alle('einkauf')).find((e) => e.name === 'Mehl');
+  ok(mehl && mehl.typ === 'frei' && mehl.zutat === 'Mehl', 'Mehl (ohne Produkt): Freitext mit Zutat "Mehl"');
+  listenKnopf('Salz').click(); await warte(500);
+  ok((await alle('einkauf')).some((e) => e.name === 'Salz'), 'Salz (leer) steht auf der Liste');
+
+  // ===== 7. Update-Hinweis, Layout =====
+  ok(doc().getElementById('update')?.hidden === true, 'Update-Hinweis ist ausgeblendet, solange keine neue Version wartet');
+  ok(!/null|undefined|NaN|\[object/.test(text()) && doc().documentElement.scrollWidth <= 390, 'Vorrat: sauber, kein seitliches Scrollen (' + doc().documentElement.scrollWidth + ')');
+  await seite('#/rezepte');
+  ok(!/null|undefined|NaN|\[object/.test(text()) && doc().documentElement.scrollWidth <= 390, 'Was koche ich?: sauber, kein seitliches Scrollen (' + doc().documentElement.scrollWidth + ')');
+  log('FERTIG');
+}
+lauf().catch((e) => { log('FAIL Fehler: ' + e.message + ' | ' + (e.stack || '').split('\n')[1]); log('FERTIG'); });
+</script>

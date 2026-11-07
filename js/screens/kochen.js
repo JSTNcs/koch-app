@@ -2,7 +2,9 @@
 // Vorrat anpassen (Zutaten abziehen, Rest speichern). Der Stand wird gespeichert, man kann jederzeit weitermachen.
 import { h, ersetze } from '../dom.js';
 import { alle, schreibeAlles } from '../db.js';
-import { baueIndex, pruefeRezept, gruppiereVorschlaege, skaliere, mengeText } from '../rezepte.js';
+import { baueIndex, pruefeRezept, gruppiereVorschlaege, skaliere, mengeText, ablaufNutzung } from '../rezepte.js';
+import { kurzText } from '../ablauf.js';
+import { findeZeiten, restSekunden, formatRest, zeitText } from '../timer.js';
 import { planeAbzug, wendeAn, berechneRest, neuerRest, neuesProtokoll, macheRueckgaengig, neuerKochstand } from '../kochen.js';
 import { ladeKochstand, speichereKochstand, loescheKochstand } from '../kochstand.js';
 import { haltWach } from '../wachhalten.js';
@@ -19,12 +21,15 @@ export async function render(container) {
   let ks = null; // laufender Kochvorgang (oder null)
   let wach = null;
   let tabelle = null;
+  let tickId = null; // Takt für die Anzeige des Timers
+  let audio = null; // Ton für das Ende des Timers
 
   const wachAn = () => (wach = wach || haltWach());
   const wachAus = () => {
     wach?.loslassen();
     wach = null;
   };
+  window.addEventListener('hashchange', () => clearInterval(tickId), { once: true });
   window.addEventListener('hashchange', wachAus, { once: true }); // beim Tabwechsel den Bildschirm wieder freigeben
 
   async function laden() {
@@ -74,6 +79,67 @@ export async function render(container) {
     zeigeAuswahl(meldung);
   }
 
+  // ---------- Timer ----------
+  // Der Timer merkt sich sein Ende (auch nach einem Wechsel in eine andere App). Er klingelt nur, solange die App offen ist.
+  function bereiteTon() {
+    try {
+      const Ton = window.AudioContext || window.webkitAudioContext;
+      if (!Ton) return;
+      audio = audio || new Ton();
+      audio.resume?.();
+    } catch {
+      // kein Ton möglich: der Timer zeigt trotzdem "Zeit ist um!"
+    }
+  }
+  function piep() {
+    try {
+      navigator.vibrate?.([300, 150, 300]);
+      if (!audio) return;
+      for (let k = 0; k < 3; k++) {
+        const o = audio.createOscillator();
+        const g = audio.createGain();
+        o.frequency.value = 880;
+        g.gain.value = 0.2;
+        o.connect(g);
+        g.connect(audio.destination);
+        const t0 = audio.currentTime + k * 0.4;
+        o.start(t0);
+        o.stop(t0 + 0.2);
+      }
+    } catch {
+      // ohne Ton geht es auch
+    }
+  }
+  async function starteTimer(zeit) {
+    bereiteTon(); // der Tipp auf den Knopf erlaubt dem iPhone den Ton
+    ks.timer = { ende: Date.now() + zeit.sekunden * 1000, sekunden: zeit.sekunden, text: zeit.text, klingelte: false };
+    await sichere();
+    zeigeSchritt(rezeptVon(ks.rezeptId));
+  }
+  async function stoppeTimer() {
+    clearInterval(tickId);
+    delete ks.timer;
+    await sichere();
+    zeigeSchritt(rezeptVon(ks.rezeptId));
+  }
+  function tick() {
+    const anzeige = container.querySelector('.timer-zeit');
+    if (!anzeige || !ks?.timer) return clearInterval(tickId);
+    const rest = restSekunden(ks.timer.ende);
+    if (rest > 0) {
+      anzeige.textContent = formatRest(rest);
+      return;
+    }
+    anzeige.textContent = 'Zeit ist um!';
+    container.querySelector('.timer-leiste')?.classList.add('fertig');
+    if (!ks.timer.klingelte) {
+      ks.timer.klingelte = true;
+      sichere();
+      piep();
+    }
+    clearInterval(tickId);
+  }
+
   // ---------- 1. Rezept wählen ----------
   function zeigeAuswahl(meldung = null) {
     wachAus();
@@ -84,8 +150,8 @@ export async function render(container) {
         h('p', { class: 'leer-text' }, 'Es gibt noch keine Rezepte. Lade das Startpaket im Tab „Was koche ich?“.')
       );
     }
-    const gruppen = gruppiereVorschlaege(rezepte.map((rezept) => ({ rezept, pruefung: pruefeRezept(rezept, { index }) })));
-    const karte = ({ rezept, pruefung }) =>
+    const gruppen = gruppiereVorschlaege(rezepte.map((rezept) => ({ rezept, pruefung: pruefeRezept(rezept, { index, tabelle }), ablauf: ablaufNutzung(rezept, { index }) })));
+    const karte = ({ rezept, pruefung, ablauf = [] }) =>
       h(
         'li',
         {},
@@ -93,7 +159,8 @@ export async function render(container) {
           'button',
           { class: 'zweit voll rezeptkarte', onclick: () => zeigeVorbereiten(rezept) },
           h('span', { class: 'titel' }, rezept.name),
-          h('span', { class: 'untertitel' }, [pruefung.kategorie === 'alles' ? 'Alles da' : `${pruefung.fehlend} ${pruefung.fehlend === 1 ? 'Zutat fehlt' : 'Zutaten fehlen'}`, rezept.dauerMinuten ? `${rezept.dauerMinuten} Min.` : null].filter(Boolean).join(' · '))
+          h('span', { class: 'untertitel' }, [pruefung.kategorie === 'alles' ? 'Alles da' : `${pruefung.fehlend} ${pruefung.fehlend === 1 ? 'Zutat fehlt' : 'Zutaten fehlen'}`, rezept.dauerMinuten ? `${rezept.dauerMinuten} Min.` : null].filter(Boolean).join(' · ')),
+          ablauf.length ? h('span', { class: 'untertitel ablauf-bald' }, 'Verbraucht: ' + ablauf.map((a) => `${a.name} (${kurzText(a.tage)})`).join(', ')) : null
         )
       );
     const abschnitt = (titel, liste) => (liste.length ? [h('h2', {}, `${titel} (${liste.length})`), h('ul', { class: 'liste' }, liste.map(karte))] : null);
@@ -109,7 +176,7 @@ export async function render(container) {
 
   // ---------- 2. Portionen wählen ----------
   function zeigeVorbereiten(rezept, portionen = rezept.portionen) {
-    const p = pruefeRezept(rezept, { index }, { portionen });
+    const p = pruefeRezept(rezept, { index, tabelle }, { portionen });
     const fehlend = p.zutaten.filter((z) => !z.optional && (z.status === 'fehlt' || z.status === 'teils')).map((z) => z.zutat);
     ersetze(
       container,
@@ -197,11 +264,19 @@ export async function render(container) {
       await sichere();
       zeige();
     };
+    clearInterval(tickId);
+    const zeiten = findeZeiten(rezept.schritte[i]);
+    const timerKnoepfe = zeiten.map((z) => h('button', { class: 'zweit voll', style: 'margin-bottom:8px', onclick: () => starteTimer(z) }, `⏱ Timer ${zeitText(z.sekunden)} starten`));
+    const timerLeiste = ks.timer
+      ? h('div', { class: 'timer-leiste' }, h('span', { class: 'timer-zeit' }, formatRest(restSekunden(ks.timer.ende))), h('span', { class: 'menge' }, ks.timer.text), h('button', { class: 'zweit klein breit', onclick: stoppeTimer }, 'Stopp'))
+      : null;
     ersetze(
       container,
       h('p', { class: 'menge' }, `${rezept.name} · Schritt ${i + 1} von ${n}`),
       h('div', { class: 'fortschritt' }, h('div', { class: 'balken', style: `width:${((i + 1) / n) * 100}%` })),
+      timerLeiste,
       h('p', { class: 'schritt-text' }, rezept.schritte[i]),
+      timerKnoepfe,
       h(
         'details',
         {},
@@ -217,6 +292,10 @@ export async function render(container) {
       h('button', { class: 'zweit voll', style: 'margin-top:12px', onclick: abbrechen }, 'Kochen abbrechen')
     );
     window.scrollTo(0, 0);
+    if (ks.timer) {
+      tick();
+      tickId = setInterval(tick, 500);
+    }
   }
 
   // ---------- 5. Portionen: entstanden und gegessen ----------
@@ -293,7 +372,7 @@ export async function render(container) {
   // ---------- 6. Vorrat anpassen ----------
   function zeigeAbzug(rezept) {
     wachAus();
-    const plan = planeAbzug(rezept, ks.portionen, { vorrat, produkte }, { optionalBenutzt: ks.optionalBenutzt, mengen: ks.mengen });
+    const plan = planeAbzug(rezept, ks.portionen, { vorrat, produkte, tabelle }, { optionalBenutzt: ks.optionalBenutzt, mengen: ks.mengen });
 
     const neuZeichnen = async () => {
       await sichere();
@@ -326,8 +405,9 @@ export async function render(container) {
       return h(
         'li',
         { class: 'eintrag' },
-        h('div', { class: 'kopf' }, h('span', { class: 'name' }, z.zutat), z.art === 'unklar' ? h('span', { class: 'menge' }, `Rezept: ${formatMenge(rezept.zutaten[z.index].menge * (ks.portionen / rezept.portionen), rezept.zutaten[z.index].einheit)}`) : null),
+        h('div', { class: 'kopf' }, h('span', { class: 'name' }, z.zutat), z.art === 'unklar' || z.umgerechnet ? h('span', { class: 'menge' }, `Rezept: ${z.umgerechnet ? formatMenge(z.umgerechnet.menge, z.umgerechnet.einheit) : formatMenge(rezept.zutaten[z.index].menge * (ks.portionen / rezept.portionen), rezept.zutaten[z.index].einheit)}`) : null),
         mengenFeld(z),
+        z.umgerechnet ? h('div', { class: 'info' }, 'Umgerechnet mit dem Stückgewicht aus der Tabelle (ca.). Du kannst die Menge ändern.') : null,
         z.art === 'unklar' ? h('div', { class: 'info' }, `Im Vorrat in anderer Einheit (${z.kandidaten.map((e) => `${e.name}: ${formatMenge(e.menge, e.einheit)}`).join(', ')}). Trage ein, wie viel du verbraucht hast, oder lass das Feld leer.`) : null,
         quellenText(z).map((t) => h('div', { class: 'info' }, t)),
         z.fehlt > 0 ? h('div', { class: 'info', style: 'color:var(--rot)' }, `Es waren nur ${formatMenge(z.betrag - z.fehlt, z.einheit)} da, mehr kann nicht abgezogen werden.`) : null

@@ -131,7 +131,8 @@ async function lauf() {
   await klick('Weiter: Vorrat anpassen', 500);
   ok(text().includes('Vorrat anpassen') && doc().querySelector('input[aria-label="Menge Spaghetti"]').value === '200', 'Abzug: Spaghetti 200 g vorausgefüllt');
   ok(text().includes('Billig Spaghetti: 100 g → leer, wird entfernt') && text().includes('Barilla Spaghetti: 500 g → 400 g'), 'Bald ablaufende zuerst: Billig (leer, wird entfernt), dann Barilla 500 → 400 g');
-  ok(text().includes('Im Vorrat in anderer Einheit') && doc().querySelector('input[aria-label="Menge Zwiebeln"]').value === '', 'Zwiebeln: Vorrat in g, Rezept in Stück: Menge selbst eintragen (leer = überspringen)');
+  ok(text().includes('Umgerechnet') && doc().querySelector('input[aria-label="Menge Zwiebeln"]').value === '90', 'Zwiebeln: Vorrat in g, Rezept in Stück: mit dem Stückgewicht umgerechnet (1 Zwiebel = 90 g), Menge änderbar');
+  ok(text().includes('Zwiebeln: 1 kg → 910 g'), 'Zwiebeln: 1 kg → 910 g (umgerechnet)');
   tippe(doc().querySelector('input[aria-label="Menge Spaghetti"]'), '250'); await warte(450);
   ok(text().includes('Barilla Spaghetti: 500 g → 350 g'), 'Menge geändert auf 250 g: Barilla 500 → 350 g');
   tippe(doc().querySelector('input[aria-label="Menge Zwiebeln"]'), '150'); await warte(450);
@@ -166,7 +167,7 @@ async function lauf() {
   await kochBisAbzug();
   ok(doc().querySelector('input[aria-label="Menge Spaghetti"]').value === '200', 'Zweiter Durchlauf: Vorgabe 200 g');
   await klick('✔ Vorrat anpassen', 800);
-  ok(!(await eintrag('vb')) && (await eintrag('va')).menge === 400 && (await eintrag('vz')).menge === 1000 && (await eintrag('vp')).menge === 100 && (await eintrag('vs')).da === true, 'Vorgaben: Spaghetti 200 g (Billig leer + Barilla 400), Zwiebeln, Parmesan und Salz unverändert');
+  ok(!(await eintrag('vb')) && (await eintrag('va')).menge === 400 && (await eintrag('vz')).menge === 910 && (await eintrag('vp')).menge === 100 && (await eintrag('vs')).da === true, 'Vorgaben: Spaghetti 200 g (Billig leer + Barilla 400), Zwiebeln 90 g (umgerechnet), Parmesan und Salz unverändert');
   await seite('#/vorrat');
   ok(text().includes('🍲 Reste') && text().includes('Testsauce') && text().includes('1 Portion') && text().includes('heute gekocht'), 'Vorrat zeigt Bereich "Reste": Testsauce, 1 Portion, heute gekocht');
   await klick('1 Portion gegessen', 500);

@@ -1,7 +1,8 @@
 // Tab "Was koche ich?": Rezepte nach dem, was im Vorrat ist (alles da / 1–2 fehlen / mehr fehlt).
 import { h, ersetze } from '../dom.js';
 import { alle, schreibeAlles } from '../db.js';
-import { baueIndex, pruefeRezept, gruppiereVorschlaege, fehlendFuerListe, mengeText } from '../rezepte.js';
+import { baueIndex, pruefeRezept, gruppiereVorschlaege, fehlendFuerListe, mengeText, ablaufNutzung } from '../rezepte.js';
+import { kurzText } from '../ablauf.js';
 import { fuegeHinzu } from '../einkauf.js';
 import { formatMenge } from '../pantry.js';
 import { beginneKochen } from '../kochstand.js';
@@ -22,7 +23,7 @@ export async function render(container) {
     tabelle = await ladeNaehrwerteTabelle();
   }
 
-  const pruefe = (r, portionen) => pruefeRezept(r, { index }, portionen ? { portionen } : {});
+  const pruefe = (r, portionen) => pruefeRezept(r, { index, tabelle }, portionen ? { portionen } : {});
   const fehlendText = (p) => {
     const namen = p.zutaten.filter((z) => !z.optional && (z.status === 'fehlt' || z.status === 'teils')).map((z) => z.zutat);
     return namen.length <= 3 ? namen.join(', ') : `${namen.slice(0, 3).join(', ')} und ${namen.length - 3} weitere`;
@@ -39,9 +40,9 @@ export async function render(container) {
         h('p', { class: 'menge', style: 'text-align:center;margin-top:12px' }, 'Eigene Rezepte legst du unter „Mehr“ an.')
       );
     }
-    const gruppen = gruppiereVorschlaege(rezepte.map((rezept) => ({ rezept, pruefung: pruefe(rezept) })));
+    const gruppen = gruppiereVorschlaege(rezepte.map((rezept) => ({ rezept, pruefung: pruefe(rezept), ablauf: ablaufNutzung(rezept, { index }) })));
 
-    const karte = ({ rezept, pruefung }) =>
+    const karte = ({ rezept, pruefung, ablauf = [] }) =>
       h(
         'li',
         {},
@@ -55,7 +56,8 @@ export async function render(container) {
             [pruefung.kategorie === 'alles' ? 'Alles da' : `Fehlt: ${fehlendText(pruefung)}`, rezept.dauerMinuten ? `${rezept.dauerMinuten} Min.` : null]
               .filter(Boolean)
               .join(' · ')
-          )
+          ),
+          ablauf.length ? h('span', { class: 'untertitel ablauf-bald' }, 'Verbraucht: ' + ablauf.map((a) => `${a.name} (${kurzText(a.tage)})`).join(', ')) : null
         )
       );
     const abschnitt = (titel, liste) =>
@@ -89,6 +91,8 @@ export async function render(container) {
   // ---------- Ein Rezept ----------
   function zeigeRezept(rezept, portionen = rezept.portionen, meldung = null) {
     const p = pruefe(rezept, portionen);
+    // Bald ablaufende Zutaten, die dieses Rezept verbraucht
+    const ablaufHinweis = new Map(ablaufNutzung(rezept, { index }).map((a) => [a.zutat, `${a.name}: ${a.text}.`]));
     // Nährwerte pro Portion (Näherung): unabhängig davon, für wie viele Portionen du gerade kochst
     const nw = tabelle ? rezeptNaehrwerte(rezept, { tabelle, produkte, vorrat }) : null;
     const de = (n) => String(n).replace('.', ',');
@@ -101,8 +105,8 @@ export async function render(container) {
     const symbol = { da: '✔', teils: '◐', fehlt: '✘', unklar: '❓', angenommen: '○' };
     const hinweis = (z) => {
       switch (z.status) {
-        case 'da': return z.art === 'menge' ? `Du hast ${formatMenge(z.habe, z.einheit)}.` : 'Ist da.';
-        case 'teils': return `Du hast ${formatMenge(z.habe, z.einheit)}, es fehlen ${formatMenge(z.fehlt, z.einheit)}.`;
+        case 'da': return z.art === 'menge' ? `Du hast ${formatMenge(z.habe, z.einheit)}${z.umgerechnet ? ' (umgerechnet)' : ''}.` : 'Ist da.';
+        case 'teils': return `Du hast ${formatMenge(z.habe, z.einheit)}${z.umgerechnet ? ' (umgerechnet)' : ''}, es fehlen ${formatMenge(z.fehlt, z.einheit)}.`;
         case 'fehlt': return z.art === 'menge' ? `Fehlt (${formatMenge(z.fehlt, z.einheit)}).` : 'Ist leer.';
         case 'unklar': return 'Im Vorrat in anderer Einheit, bitte selbst prüfen.';
         default: return 'Nicht im Vorrat eingetragen, ich nehme an, du hast es.';
@@ -117,7 +121,7 @@ export async function render(container) {
           'span',
           { class: 'texte' },
           h('span', { class: 'titel' }, z.zutat, z.optional ? h('span', { class: 'marke' }, ' freiwillig') : null),
-          h('span', { class: 'untertitel' }, hinweis(z) + (z.notiz ? ` (${z.notiz})` : ''))
+          h('span', { class: 'untertitel' }, hinweis(z) + (z.notiz ? ` (${z.notiz})` : '') + (ablaufHinweis.has(z.zutat) ? ` ${ablaufHinweis.get(z.zutat)}` : ''))
         ),
         h('span', { class: 'menge-rechts' }, mengeText({ art: z.art, menge: z.braucht, einheit: z.einheit }))
       );

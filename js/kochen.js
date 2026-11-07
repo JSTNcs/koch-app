@@ -2,6 +2,7 @@
 import { normalisiereEintrag } from './pantry.js';
 import { skaliere } from './rezepte.js';
 import { schluessel, zutatVonEintrag } from './zutaten.js';
+import { umrechnen } from './einheiten.js';
 
 const eps = 1e-9;
 const runde = (n) => Math.round(n * 100) / 100;
@@ -18,7 +19,7 @@ const gueltigesDatum = (t) => typeof t === 'string' && !Number.isNaN(Date.parse(
 //   unklar   Vorrat nur in anderer Einheit: der Nutzer gibt die Menge an (Vorgabe 0)
 //   gewuerz  nach Bedarf: nichts wird abgezogen, kandidaten sind Einträge, die der Nutzer auf "leer" setzen kann
 //   nichtDa  nichts im Vorrat: nichts abzuziehen, fehlt = Menge
-export function planeAbzug(rezept, portionen, { vorrat, produkte }, { optionalBenutzt = [], mengen = {} } = {}) {
+export function planeAbzug(rezept, portionen, { vorrat, produkte, tabelle = null }, { optionalBenutzt = [], mengen = {} } = {}) {
   const skaliert = skaliere(rezept, portionen);
   const arbeit = new Map(vorrat.map((e) => [e.id, e.art === 'menge' ? e.menge : 0])); // Restmenge während des Planens
   const index = new Map();
@@ -46,13 +47,24 @@ export function planeAbzug(rezept, portionen, { vorrat, produkte }, { optionalBe
     let quellenEintraege = gleiche;
     let vorgabe = standard;
     let kandidaten = [];
+    let umgerechnet = null;
     if (gleiche.length) art = 'abzug';
     else if (andere.length) {
-      art = 'unklar';
-      einheit = andere[0].einheit;
-      quellenEintraege = andere.filter((e) => e.einheit === einheit);
-      kandidaten = andere;
-      vorgabe = null;
+      // Vorrat in anderer Einheit: mit der Tabelle umrechnen (1 Stück Zwiebel = 90 g), sonst gibt der Nutzer die Menge selbst an
+      const umrechenbar = tabelle ? andere.filter((e) => umrechnen(1, z.einheit, e.einheit, z.zutat, tabelle) !== null) : [];
+      if (umrechenbar.length) {
+        art = 'abzug';
+        einheit = umrechenbar[0].einheit;
+        quellenEintraege = umrechenbar.filter((e) => e.einheit === einheit);
+        vorgabe = runde(umrechnen(standard, z.einheit, einheit, z.zutat, tabelle));
+        umgerechnet = { menge: standard, einheit: z.einheit };
+      } else {
+        art = 'unklar';
+        einheit = andere[0].einheit;
+        quellenEintraege = andere.filter((e) => e.einheit === einheit);
+        kandidaten = andere;
+        vorgabe = null;
+      }
     } else if (gewuerzDa.length) return { ...basis, art: 'gewuerz', kandidaten: gewuerzDa };
     else art = 'nichtDa';
 
@@ -76,7 +88,7 @@ export function planeAbzug(rezept, portionen, { vorrat, produkte }, { optionalBe
       arbeit.set(e.id, nachher);
       offen -= nimm;
     }
-    return { ...basis, art, einheit, standard: vorgabe, betrag, quellen, fehlt: runde(Math.max(0, offen)), kandidaten };
+    return { ...basis, art, einheit, standard: vorgabe, betrag, quellen, fehlt: runde(Math.max(0, offen)), kandidaten, ...(umgerechnet ? { umgerechnet } : {}) };
   });
   return { portionen, zeilen };
 }

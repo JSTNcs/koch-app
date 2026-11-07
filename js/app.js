@@ -43,16 +43,46 @@ async function zeigeBildschirm() {
 window.addEventListener('hashchange', zeigeBildschirm);
 zeigeBildschirm();
 
-// Offline-Fähigkeit: Service Worker anmelden
+// Offline-Fähigkeit: Service Worker anmelden und auf neue App-Versionen achten
 if ('serviceWorker' in navigator) {
+  const updateBanner = document.getElementById('update');
+  const updateKnopf = document.getElementById('update-knopf');
   let schonNeuGeladen = false;
+  let aktualisierenAngefordert = false; // der Nutzer hat auf "Jetzt aktualisieren" getippt
   // Gab es beim Start schon einen Service Worker? Dann ist ein späterer Wechsel ein Update.
   const warSchonInstalliert = Boolean(navigator.serviceWorker.controller);
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    // Neue App-Version ist aktiv geworden: einmal neu laden (aber nicht beim allerersten Start).
-    if (schonNeuGeladen || !warSchonInstalliert) return;
+    // Die neue Version ist aktiv geworden: einmal neu laden (aber nicht beim allerersten Start).
+    if (schonNeuGeladen || !(warSchonInstalliert || aktualisierenAngefordert)) return;
     schonNeuGeladen = true;
     location.reload();
   });
-  navigator.serviceWorker.register('sw.js').catch((e) => console.warn('Service Worker:', e));
+  // Eine neue Version wartet: Hinweis zeigen. Erst der Tipp darauf schaltet um und lädt neu.
+  const zeigeUpdate = (worker) => {
+    updateBanner.hidden = false;
+    updateKnopf.disabled = false;
+    updateKnopf.onclick = () => {
+      updateKnopf.disabled = true;
+      aktualisierenAngefordert = true;
+      worker.postMessage('skipWaiting');
+    };
+  };
+  navigator.serviceWorker
+    .register('sw.js')
+    .then((reg) => {
+      if (reg.waiting && navigator.serviceWorker.controller) zeigeUpdate(reg.waiting);
+      reg.addEventListener('updatefound', () => {
+        const neu = reg.installing;
+        neu?.addEventListener('statechange', () => {
+          if (neu.state === 'installed' && navigator.serviceWorker.controller) zeigeUpdate(neu);
+        });
+      });
+      // Das iPhone fragt von selbst selten nach: beim Öffnen und beim Zurückkehren in die App nachsehen
+      const pruefen = () => reg.update().catch(() => {});
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') pruefen();
+      });
+      pruefen();
+    })
+    .catch((e) => console.warn('Service Worker:', e));
 }

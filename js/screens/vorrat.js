@@ -6,6 +6,10 @@ import { mahlzeitAusPortionen } from '../naehrwerte.js';
 import { ladeHinweis } from '../sicherung.js';
 import { schlageZutatVor, zutatVonEintrag, findeZutat } from '../zutaten.js';
 import { zutatenDatalist, ZUTATEN_LISTE_ID } from '../zutaten-ui.js';
+import { ablaufStatus, baldAblaufend, kurzText } from '../ablauf.js';
+import { ablaufSchnellknoepfe } from '../ablauf-ui.js';
+import { leerStatus, listeneintragFuerLeer } from '../leer.js';
+import { fuegeHinzu } from '../einkauf.js';
 import {
   neuerEintrag,
   mengeAendern,
@@ -57,16 +61,27 @@ export async function render(container) {
           h('button', { class: 'zweit voll', onclick: () => (location.hash = '#/einstellungen') }, 'Jetzt sichern')
         )
       : null;
+    // Bald ablaufende oder überschrittene Einträge (neutral formuliert, das Datum allein sagt nicht, ob etwas verdorben ist)
+    const bald = baldAblaufend(liste);
+    const ablaufBanner = bald.length
+      ? h(
+          'div',
+          { class: 'hinweis warnung' },
+          h('p', { style: 'margin:0 0 6px' }, h('strong', {}, `Bald ablaufend oder überschritten (${bald.length})`)),
+          h('p', { style: 'margin:0 0 10px' }, bald.slice(0, 4).map((x) => `${x.eintrag.name} (${kurzText(x.status.tage)})`).join(', ') + (bald.length > 4 ? ` und ${bald.length - 4} weitere` : '')),
+          h('button', { class: 'zweit voll', onclick: () => (location.hash = '#/rezepte') }, 'Rezepte dafür ansehen')
+        )
+      : null;
     const resteBlock = reste.length ? [h('h2', {}, '🍲 Reste'), h('ul', { class: 'liste' }, reste.map(restKarte)), h('h2', {}, 'Vorrat')] : null;
     const meldungBlock = meldung
       ? h(
           'div',
           { class: 'hinweis' },
           h('p', { style: 'margin:0 0 10px' }, meldung.text),
-          h('button', { class: 'zweit voll', onclick: meldung.rueckgaengig }, '↩ Rückgängig')
+          meldung.rueckgaengig ? h('button', { class: 'zweit voll', onclick: meldung.rueckgaengig }, '↩ Rückgängig') : null
         )
       : null;
-    const teile = [kopf, erinnerung, meldungBlock, fehler ? h('p', { class: 'hinweis fehler' }, fehler) : null, resteBlock, inhalt].flat().filter(Boolean);
+    const teile = [kopf, erinnerung, ablaufBanner, meldungBlock, fehler ? h('p', { class: 'hinweis fehler' }, fehler) : null, resteBlock, inhalt].flat().filter(Boolean);
     container.replaceChildren(...teile);
   }
 
@@ -111,7 +126,16 @@ export async function render(container) {
     zeigeListe();
   }
 
+  // Leer oder fast leer: ein Tipp setzt es auf die Einkaufsliste (steht es schon drauf, bleibt es wie es ist)
+  async function aufDieListe(e) {
+    const r = fuegeHinzu(await alle('einkauf'), listeneintragFuerLeer(e, produkteListe));
+    if (!r.zusammengefuehrt) await schreibeAlles({ einkauf: { put: [r.eintrag] } });
+    zeigeListe('', { text: r.zusammengefuehrt ? `${e.name} steht schon auf der Einkaufsliste.` : `✔ ${e.name} steht jetzt auf der Einkaufsliste.` });
+  }
+
   function eintragKarte(e) {
+    const st = ablaufStatus(e.ablauf);
+    const leer = leerStatus(e, produkteListe);
     const knoepfe =
       e.art === 'menge'
         ? [
@@ -129,12 +153,14 @@ export async function render(container) {
         h('span', { class: 'name' }, e.name),
         h('span', { class: 'menge' }, e.art === 'menge' ? formatMenge(e.menge, e.einheit) : e.da ? 'da' : 'leer')
       ),
-      e.ablauf ? h('div', { class: 'menge' }, `Haltbar bis ${datumDeutsch(e.ablauf)}`) : null,
+      e.ablauf ? h('div', { class: `info ablauf-${st.art}` }, st.art === 'abgelaufen' ? `${st.text} (prüfe selbst)` : st.text) : null,
+      leer ? h('div', { class: 'info ablauf-bald' }, leer === 'leer' ? 'Leer' : 'Fast leer') : null,
       h(
         'div',
         { class: 'knoepfe' },
         ...knoepfe,
         h('button', { class: 'zweit', onclick: () => zeigeFormular(e) }, 'Ändern'),
+        leer ? h('button', { class: 'zweit', onclick: () => aufDieListe(e) }, '🛒 Auf die Liste') : null,
         h('button', { class: 'gefahr', onclick: () => loeschen(e) }, 'Löschen')
       )
     );
@@ -236,6 +262,7 @@ export async function render(container) {
       mengeBlock,
       h('label', {}, 'Haltbar bis (freiwillig)'),
       ablauf,
+      ablaufSchnellknoepfe(ablauf),
       fehlerBox,
       h(
         'div',

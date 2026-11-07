@@ -85,7 +85,10 @@ Der Nutzer hat keine Programmiererfahrung: Antworten auf Deutsch, einfach erklä
 3. Rezepte (eigene, Startpaket, Import am PC) und „Was koche ich?“
 4. Kochen-Modus mit Abziehen und Resten
 5. Tagebuch und Tagesziel
-6. Feinschliff: Ablaufdatum-Hinweise (bald ablaufende Zutaten zuerst vorschlagen), Design
+6. Feinschliff, in zwei Teilen mit je einem iPhone-Test:
+   - Teil 1 (Funktionen, umgesetzt): Ablaufdatum-Hinweise (3 Tage) und bald ablaufende Zutaten zuerst vorschlagen, Einheiten umrechnen (Stück ↔ g/ml über die Nährwert-Tabelle),
+     Timer in Kochschritten, leere Vorräte auf die Einkaufsliste, Hinweis bei neuer App-Version.
+   - Teil 2 (Design „Dunkel und modern"): zentrale Farben, eigene Symbole, neues App-Symbol.
 
 Jede Phase endet mit einem Test am echten iPhone, bevor die nächste beginnt.
 

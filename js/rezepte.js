@@ -5,6 +5,8 @@
 import { EINHEITEN, formatMenge } from './pantry.js';
 import { norm, schluessel, kanonName, zutatVonEintrag, zutatVonProdukt } from './zutaten.js';
 import { neuerProduktEintrag, neuerFreiEintrag } from './einkauf.js';
+import { umrechnen } from './einheiten.js';
+import { ablaufStatus, BALD_TAGE } from './ablauf.js';
 
 const DATEI_FORMAT = 'koch-app-rezepte';
 const DATEI_VERSION = 1;
@@ -103,33 +105,68 @@ export function pruefeRezept(rezept, ctx, { portionen = rezept.portionen } = {})
     let status;
     let habe = null;
     let fehlt = null;
+    let wurdeUmgerechnet = false;
 
     if (z.art === 'da_leer') {
       status = !eintraege.length ? 'angenommen' : eintraege.some(hatEtwas) ? 'da' : 'fehlt';
     } else {
       const gleich = eintraege.filter((e) => e.art === 'menge' && e.einheit === z.einheit);
       habe = runde2(gleich.reduce((s, e) => s + e.menge, 0));
-      const andere = eintraege.some((e) => e.art === 'menge' && e.einheit !== z.einheit && e.menge > 0);
+      const andere = eintraege.filter((e) => e.art === 'menge' && e.einheit !== z.einheit && e.menge > 0);
+      // Mit der Tabelle lassen sich andere Einheiten umrechnen (1 kg Zwiebeln = rund 11 Stück)
+      if (ctx.tabelle) {
+        const umgerechnet = andere.map((e) => umrechnen(e.menge, e.einheit, z.einheit, z.zutat, ctx.tabelle)).filter((u) => u !== null);
+        if (umgerechnet.length) {
+          habe = runde2(habe + umgerechnet.reduce((a, b) => a + b, 0));
+          wurdeUmgerechnet = true;
+        }
+      }
       const gewuerzDa = eintraege.some((e) => e.art === 'da_leer' && e.da === true);
       if (habe >= braucht - eps || gewuerzDa) status = 'da';
-      else if (habe === 0 && andere) status = 'unklar';
+      else if (habe === 0 && andere.length && !wurdeUmgerechnet) status = 'unklar';
       else if (habe > 0) status = 'teils';
       else status = 'fehlt';
       if (status === 'teils' || status === 'fehlt') fehlt = runde2(braucht - habe);
     }
-    return { zutat: z.zutat, art: z.art, optional: z.optional, notiz: z.notiz, einheit: z.einheit, braucht, habe, fehlt, status };
+    return { zutat: z.zutat, art: z.art, optional: z.optional, notiz: z.notiz, einheit: z.einheit, braucht, habe, fehlt, status, umgerechnet: wurdeUmgerechnet };
   });
   const fehlend = zutaten.filter((z) => !z.optional && (z.status === 'fehlt' || z.status === 'teils')).length;
   const kategorie = fehlend === 0 ? 'alles' : fehlend <= 2 ? 'wenig' : 'mehr';
   return { portionen, zutaten, fehlend, kategorie };
 }
 
-// Für "Was koche ich?": [{ rezept, pruefung }] -> { alles, wenig, mehr }, jeweils sortiert.
+// Welche bald ablaufenden (oder überschrittenen) Zutaten ein Rezept verbrauchen würde: [{ zutat, name, tage }],
+// je Zutat der dringendste Eintrag. Freiwillige Zutaten zählen nicht. index kommt von baueIndex.
+export function ablaufNutzung(rezept, { index, jetzt = new Date(), schwelle = BALD_TAGE }) {
+  const ergebnis = [];
+  for (const z of rezept.zutaten) {
+    if (z.optional) continue;
+    let beste = null;
+    for (const e of index.get(schluessel(z.zutat)) || []) {
+      if (!e.ablauf || !(e.art === 'menge' ? e.menge > 0 : e.da === true)) continue;
+      const st = ablaufStatus(e.ablauf, jetzt, schwelle);
+      if ((st.art === 'bald' || st.art === 'abgelaufen') && (!beste || st.tage < beste.tage)) beste = { zutat: z.zutat, name: e.name, tage: st.tage, text: st.text };
+    }
+    if (beste) ergebnis.push(beste);
+  }
+  return ergebnis;
+}
+
+// Für "Was koche ich?": [{ rezept, pruefung, ablauf? }] -> { alles, wenig, mehr }, jeweils sortiert:
+// Rezepte mit bald ablaufenden Zutaten zuerst (die dringendsten ganz oben), dann weniger fehlende Zutaten, dann nach Name.
 export function gruppiereVorschlaege(liste) {
   const gruppen = { alles: [], wenig: [], mehr: [] };
   for (const x of liste) gruppen[x.pruefung.kategorie].push(x);
   const nachName = (a, b) => a.rezept.name.localeCompare(b.rezept.name, 'de', { sensitivity: 'base' });
-  for (const g of Object.values(gruppen)) g.sort((a, b) => a.pruefung.fehlend - b.pruefung.fehlend || nachName(a, b));
+  const dringend = (x) => (x.ablauf?.length ? Math.min(...x.ablauf.map((a) => a.tage)) : Infinity);
+  for (const g of Object.values(gruppen)) {
+    g.sort((a, b) => {
+      const da = dringend(a);
+      const db = dringend(b);
+      if (da !== db) return da < db ? -1 : 1;
+      return a.pruefung.fehlend - b.pruefung.fehlend || nachName(a, b);
+    });
+  }
   return gruppen;
 }
 

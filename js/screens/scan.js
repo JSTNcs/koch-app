@@ -7,6 +7,7 @@
 //               Eintrag, fragt die App: "Ist das Ersatz für …?" (andere Firma, gleiches Produkt).
 import { h, ersetze } from '../dom.js';
 import { schlageZutatVor } from '../zutaten.js';
+import { ablaufSchnellknoepfe } from '../ablauf-ui.js';
 import { zutatenDatalist, ZUTATEN_LISTE_ID } from '../zutaten-ui.js';
 import { alle, hole, schreibeAlles } from '../db.js';
 import { starteScanner } from '../scanner.js';
@@ -262,7 +263,7 @@ export function starteScan(container, { fertig, modus = 'vorrat', beiProdukt = n
       h('label', {}, 'Art'),
       art,
       mengeBlock,
-      mitAblauf ? [h('label', {}, 'Haltbar bis (freiwillig)'), ablauf] : null,
+      mitAblauf ? [h('label', {}, 'Haltbar bis (freiwillig)'), ablauf, ablaufSchnellknoepfe(ablauf)] : null,
       h(
         'details',
         { style: 'margin-top:12px' },

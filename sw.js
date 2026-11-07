@@ -1,6 +1,6 @@
 // Service Worker: legt alle App-Dateien im Handy-Speicher ab, damit die App offline läuft.
 // WICHTIG: Bei jeder Änderung an App-Dateien VERSION hochzählen, sonst sieht das Handy die Änderung nicht.
-const VERSION = 'v10';
+const VERSION = 'v11';
 const CACHE = 'koch-app-' + VERSION;
 
 const ASSETS = [
@@ -33,6 +33,11 @@ const ASSETS = [
   'js/profil.js',
   'js/naehrwerte.js',
   'js/naehrwerte-laden.js',
+  'js/ablauf.js',
+  'js/ablauf-ui.js',
+  'js/einheiten.js',
+  'js/leer.js',
+  'js/timer.js',
   'js/screens/leer.js',
   'js/screens/vorrat.js',
   'js/screens/einstellungen.js',
@@ -65,9 +70,14 @@ self.addEventListener('install', (event) => {
           await cache.put(url, antwort);
         })
       );
-      await self.skipWaiting();
+      // Kein skipWaiting hier: Eine neue Version wartet, bis der Nutzer in der App auf "Jetzt aktualisieren" tippt
+      // (oder die App ganz schließt und neu öffnet). So mischen sich nie alte und neue Dateien.
     })()
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data === 'skipWaiting') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
