@@ -1,7 +1,7 @@
 # Stand
 
-**Phase 1 ist abgeschlossen** (am iPhone getestet). **Phase 2 (Einkaufsliste) ist gebaut und online (Version v6),
-der Test am echten iPhone steht noch aus.** Danach: Phase 3 (Rezepte, „Was koche ich?").
+**Phase 1 und Phase 2 (Einkaufsliste) sind abgeschlossen und am iPhone getestet** (Version v6).
+Nächste Phase: 3 (Rezepte: eigene, Startpaket, Import am PC, und „Was koche ich?"). Vorher Plan zeigen und OK abwarten.
 
 ## Wo läuft was
 - App im Netz: https://jstncs.github.io/koch-app/ (GitHub Pages, Zweig `main`, Ordner `/`)
@@ -60,7 +60,7 @@ der Test am echten iPhone steht noch aus.** Danach: Phase 3 (Rezepte, „Was koc
 - Import einer Sicherung ersetzt alle Daten (kein Mischen).
 
 ## Offen / Bekanntes
-- Phase 2: Test am iPhone (Liste füllen, abhaken, einräumen, Einkauf scannen mit Ersatz-Frage, Sicherung).
+- Nichts offen aus Phase 1 und 2.
 - Design bewusst schlicht, kommt in Phase 6.
 - Open-Food-Facts-Daten sind nicht immer vollständig; dann im Prüf-Formular ergänzen.
 - Daten liegen nur im Browser-Speicher des iPhones: regelmäßig sichern (Datei z. B. in iCloud Drive).
